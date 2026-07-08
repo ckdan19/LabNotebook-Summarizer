@@ -25,20 +25,29 @@ Fetches posts from the [genefish WordPress lab notebook](https://genefish.wordpr
 
 4. **Group by author** when more than one author is present. Use a `## Author Name` heading per author, with their posts listed beneath in chronological order.
 
-5. **Output format**:
+5. **Format the digest** as plain text using this structure:
 
 ```
 # Weekly Lab Digest — [week_start] to [today]
 
 ## [Author Name]
 
-**[Post Title]** · [YYYY-MM-DD] · [URL]
+**[Post Title]** · [YYYY-MM-DD]
+[URL]
+
 [2-3 sentence summary]
+
+---
 
 ## [Author Name 2]
-
-**[Post Title]** · [YYYY-MM-DD] · [URL]
-[2-3 sentence summary]
+...
 ```
 
-If all posts are from a single author, omit the author grouping headers and just list posts chronologically.
+If all posts are from a single author, omit the author grouping headers and list posts chronologically.
+
+6. **Upload to Google Drive** using the `mcp__claude_ai_Google_Drive__create_file` tool:
+   - `title`: `"Lab Digest — Week of [week_start]"` (e.g. `"Lab Digest — Week of 2026-06-30"`)
+   - `textContent`: the full formatted digest text
+   - `contentMimeType`: `"text/plain"` (Google Drive will auto-convert to a Google Doc)
+
+7. **Return the view URL** from the tool response so the user can open or share the doc.
