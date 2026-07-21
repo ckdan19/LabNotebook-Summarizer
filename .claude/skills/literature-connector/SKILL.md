@@ -4,7 +4,7 @@ Trigger this skill when the user asks to **find recent papers**, **check the lit
 
 ## What this skill does
 
-Searches both **PubMed** (peer-reviewed publications) and **bioRxiv** (preprints) for literature published in the last 12 months matching a user-supplied topic, fetches abstracts, and writes a brief (2–3 sentence, no direct quotes) characterization of each paper's relationship to a user-supplied lab finding. Relationships are categorized as one of: **Supports**, **Conflicts**, **Adds context**, or **Suggests next step**. Every entry is clearly labeled by source — **PubMed** or **bioRxiv preprint** — since preprints have not been peer-reviewed. If no genuinely relevant recent literature is found, the skill says so plainly — it does not stretch a loose match.
+Searches both **PubMed** (peer-reviewed publications) and preprint servers indexed by Europe PMC (bioRxiv, Authorea Preprints, Research Square, medRxiv, etc.) for literature published in the last 12 months matching a user-supplied topic, fetches abstracts, and writes a brief (2–3 sentence, no direct quotes) characterization of each paper's relationship to a user-supplied lab finding. Relationships are categorized as one of: **Supports**, **Conflicts**, **Adds context**, or **Suggests next step**. Every entry is clearly labeled by source — **PubMed** or the actual preprint publisher name (e.g., **bioRxiv preprint**, **Authorea Preprints preprint**) — since preprints have not been peer-reviewed. If no genuinely relevant recent literature is found, the skill says so plainly — it does not stretch a loose match.
 
 ## Inputs
 
@@ -104,6 +104,7 @@ From the `resultList.result` array in the JSON response, extract for each record
 - First author name from `authorList.author[0]` (use `fullName` or `lastName`)
 - `abstractText`
 - `doi`
+- **Publisher name** — check these fields in order and use the first non-empty value: `publisher`, `bookOrReportDetails.publisher`, `journalInfo.journal.title`. This is the actual preprint server name (e.g., "bioRxiv", "Authorea Preprints", "Research Square", "medRxiv"). If none of these fields are present, fall back to `"Preprint"`.
 - Confirm `source` is `PPR`; discard any record where source is not `PPR`
 - Skip any record where `abstractText` is missing — do not guess content from the title alone
 
@@ -135,7 +136,7 @@ For each paper that passes the relevance filter, write a single entry with:
 
 1. **Source badge** — one of:
    - `[PubMed]` for peer-reviewed publications
-   - `[bioRxiv preprint — not peer-reviewed]` for preprints
+   - `[PUBLISHER preprint — not peer-reviewed]` for preprints, where `PUBLISHER` is the actual publisher name extracted in Step 5 (e.g., `[bioRxiv preprint — not peer-reviewed]`, `[Authorea Preprints preprint — not peer-reviewed]`, `[Research Square preprint — not peer-reviewed]`). Never hardcode "bioRxiv" — always use the value from the API response.
 
 2. **Relationship tag** — choose exactly one:
    - `Supports` — abstract reports a result consistent with or confirming the FINDING
@@ -193,7 +194,7 @@ If no relevant papers passed the filter from either source, replace the "Relevan
 
 Always include at the bottom of the output:
 
-> Coverage limited to papers indexed on PubMed and bioRxiv preprints discoverable via Europe PMC (which indexes all bioRxiv content), restricted to the last 12 months. **bioRxiv preprints have not been peer-reviewed** and should be interpreted with appropriate caution. Preprints that have since been published in a peer-reviewed journal are reported in their published form where detected.
+> Coverage limited to papers indexed on PubMed and preprints discoverable via Europe PMC (which indexes bioRxiv, Authorea Preprints, Research Square, medRxiv, and other preprint servers), restricted to the last 12 months. **Preprints have not been peer-reviewed** and should be interpreted with appropriate caution. Preprints that have since been published in a peer-reviewed journal are reported in their published form where detected.
 
 Additional rules:
 - Do not speculate about paper content beyond what is stated in the retrieved abstract.
