@@ -44,13 +44,16 @@ head -1 PATH_TO_DIGEST | sed 's/^# //'
 
 ### 4. Convert Markdown to HTML
 
+Before converting, skip the first line of the digest (the `#` heading already extracted as the post title) so it does not appear twice — once as the WordPress post title and again at the top of the body.
+
 Use Python's `markdown` library if available, otherwise fall back to `pandoc`:
 
 ```bash
 # Try Python markdown first
 python3 -c "
 import sys, markdown
-content = open('PATH_TO_DIGEST').read()
+lines = open('PATH_TO_DIGEST').readlines()
+content = ''.join(lines[1:]).lstrip('\n')
 print(markdown.markdown(content, extensions=['tables', 'fenced_code', 'nl2br']))
 " 2>/dev/null
 ```
@@ -58,7 +61,8 @@ print(markdown.markdown(content, extensions=['tables', 'fenced_code', 'nl2br']))
 If that fails (Python markdown not installed), fall back to:
 
 ```bash
-pandoc -f markdown -t html PATH_TO_DIGEST
+# Skip first line with tail, then pipe to pandoc
+tail -n +2 PATH_TO_DIGEST | pandoc -f markdown -t html
 ```
 
 If neither is available, report: `Could not convert Markdown to HTML — please install python3-markdown (pip install markdown) or pandoc.` and stop.
