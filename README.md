@@ -40,13 +40,13 @@ Then just type a request in the chat box.
 >
 > "What did the lab post on WordPress this week?"
 
-**Change the time window** — single-notebook requests default to 7 days but accept any window.
+**Change the time window** — every request defaults to 7 days but accepts any window, including the full digest.
 
 > "What's new in Sam's notebook over the last 3 weeks?"
 >
 > "Summarize Ariana's posts from the last 30 days"
-
-The **full** lab digest is fixed at 7 days. For a longer combined window, ask for each notebook separately.
+>
+> "Give me a full lab digest for the last 14 days"
 
 **Connect a finding to the literature** — searches PubMed and preprint servers for the last 12 months and labels each paper *Supports*, *Conflicts*, *Adds context*, or *Suggests next step*.
 
@@ -78,14 +78,18 @@ This one needs two things from you: the **topic** to search, and the **specific 
 
 ```
 LabNotebook-Summarizer/
+├── .claude/
+│   ├── skills/              # full-lab-digest, weekly-lab-digest, literature-connector, wordpress-publisher
+│   └── agents/              # One subagent per notebook source (five total)
 ├── scripts/
 │   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
 │   └── publish_digest.py    # Converts a digest to sanitized HTML and posts it as a WP draft
-├── digests/                 # Generated weekly digest files (Markdown)
+├── digests/                 # Generated digest files (Markdown)
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
 │   └── skill-literature-connector.md
+├── ROADMAP.md               # Planned improvements, roughly in priority order
 └── README.md
 ```
 
@@ -105,7 +109,7 @@ The tool currently monitors five notebook sources:
 
 ### `scripts/fetch_github_notebook.py`
 
-Returns JSON describing every notebook post changed in the last 7 days in one of the four GitHub-hosted notebooks, for use by the notebook subagents:
+Returns JSON describing every notebook post changed in the last 7 days — or any window, via `--days` — in one of the four GitHub-hosted notebooks, for use by the notebook subagents:
 
 ```bash
 python3 scripts/fetch_github_notebook.py --notebook sams        # or: ariana, grace, tumbling-oysters
@@ -173,14 +177,16 @@ Requires `python-markdown` (`pip install markdown`) or `pandoc`. Neither is a st
 
 ## Claude Code Skills
 
-The summarization and analysis work is performed by Claude Code skills:
+The summarization and analysis work is performed by Claude Code skills in `.claude/skills/`:
 
 | Skill | Description |
 |---|---|
-| `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
-| `tumbling-oysters-agent` | Reads Steven Roberts' GitHub notebook and summarizes recent posts |
 | `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis and literature connections |
-| `literature-connector` | Queries PubMed E-utilities for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
+| `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
+| `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
+| `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
+
+Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all five.
 
 ### Changing the time window
 
