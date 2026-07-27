@@ -22,6 +22,8 @@ ls -t digests/full-lab-digest-*.md | head -1
 
 Print the resolved file path to the user so they can confirm it is the right one.
 
+Full-digest filenames end in the window length (`full-lab-digest-2026-07-27-14d.md`), so a date alone can match more than one file — say, a 7-day and a 14-day digest ending on the same day. If the user gave only a date and it matches several, list the matches and ask which to publish.
+
 ### 2. Preview the converted post
 
 Run the publisher in dry-run mode. This reads and converts the digest but does **not** read the token or contact the API:

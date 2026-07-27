@@ -182,13 +182,21 @@ The summarization and analysis work is performed by Claude Code skills:
 | `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis and literature connections |
 | `literature-connector` | Queries PubMed E-utilities for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
 
+### Changing the time window
+
+Every source defaults to a 7-day window, and every source accepts a different one. Ask for the window in plain language and the skill threads it through the subagents, the date range in the header, and the digest footer:
+
+> give me a full lab digest for the last 14 days
+
+The same applies to a single notebook ("what's new in Sam's notebook over the past month"). Under the hood this becomes `--days N` on `fetch_github_notebook.py` or `fetch_lab_posts.py`. The window is also encoded in the digest filename (`full-lab-digest-2026-07-27-14d.md`), so a 14-day digest does not overwrite the 7-day one that ends on the same date.
+
 ## Digests
 
 Generated digests are saved to the `digests/` directory as Markdown files, named by date range. Digest types include:
 
 - **`2026-06-30.md`, `2026-07-07.md`** — WordPress-only weekly digests, grouped by author
 - **`tumbling-oysters-YYYY-MM-DD.md`** — Focused digests for Steven Roberts' Tumbling Oysters notebook
-- **`full-lab-digest-YYYY-MM-DD.md`** — Full multi-source weekly digests including:
+- **`full-lab-digest-YYYY-MM-DD-Nd.md`** — Full multi-source digests, named by end date and window length (`-7d` by default). Files predating this convention omit the `-Nd` suffix. Each includes:
   - Per-notebook summaries (all five sources)
   - Cross-notebook pattern detection (shared species, assays, and themes)
   - Literature connections via PubMed and bioRxiv
