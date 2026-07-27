@@ -155,7 +155,9 @@ Runs all five lab-notebook subagents in parallel, collects their summaries, and 
    Do not copy the literature-connector's full header block (query strings, retrieval counts, caveats) into the digest — those details belong in the literature-connector's own standalone output, not here. Carry over only the relevant literature entries and the summary paragraph per finding.
 
 7. **Write the file** to:
-   `~/LabNotebook-Summarizer/digests/full-lab-digest-[week_end].md`
+   `digests/full-lab-digest-[week_end].md`
    (e.g. `digests/full-lab-digest-2026-07-13.md`)
+
+   This path is relative to the repository root, which is the working directory Claude Code starts in.
 
 8. **Return the file path** to the user in the main conversation.

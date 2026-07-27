@@ -60,9 +60,9 @@ Classify each link as `local` (relative path, no `http`) or `external` (starts w
 ## Step 5 — Write the digest to the repo
 
 Write the full structured summary to:
-`~/LabNotebook-Summarizer/digests/tumbling-oysters-YYYY-MM-DD.md`
+`digests/tumbling-oysters-YYYY-MM-DD.md`
 
-where the date is today's date. Use this file header:
+where the date is today's date. The path is relative to the repository root, which is the working directory Claude Code starts in. Use this file header:
 
 ```
 # Tumbling Oysters Digest — Week of [week_start] to [today]
