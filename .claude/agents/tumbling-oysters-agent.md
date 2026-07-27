@@ -9,60 +9,59 @@ tools:
 
 You summarize recent post activity in the sr320/tumbling-oysters GitHub repository. Follow these steps exactly and return only the structured summary — do not dump raw fetched content into the conversation.
 
-## Step 1 — Find commits from the last 7 days
+## Repo structure notes
+
+- This is a **Quarto blog**. Posts live in per-post folders under `posts/` — e.g. `posts/84-trout-meth/index.qmd` — so the folder name, not the filename, carries the slug.
+- Front matter fields to extract: `title`, `author`, `date`, `categories` (list).
+
+## Step 1 — Fetch the changed posts
+
+Run the helper script from the repository root (the working directory Claude Code starts in):
 
 ```bash
-SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
-gh api "repos/sr320/tumbling-oysters/commits?since=${SINCE}&per_page=100" \
-  --jq '[.[].sha] | @tsv'
+python3 scripts/fetch_github_notebook.py --notebook tumbling-oysters
 ```
 
-If the `date -d` flag fails (macOS), use `date -u -v-7d +%Y-%m-%dT%H:%M:%SZ` instead.
+This makes two GitHub API calls to find every post changed in the last 7 days, then fetches those post bodies — do **not** call the GitHub API yourself, and do not use `gh` (it is not installed on this machine). Pass `--days N` if a window other than 7 days is requested.
 
-## Step 2 — Collect changed .qmd files under posts/
+The script prints JSON with `repo`, `week_start`, `today`, `commits_scanned`, `posts`, and `warnings`. Each entry in `posts` has:
 
-For each SHA from Step 1, run:
+- `path` — e.g. `posts/84-trout-meth/index.qmd`
+- `content` — the post source, read at the commit that changed it
+- `change_class` — `substantive` (new post or a real edit) or `cosmetic` (a modified post whose diff is ≤6 lines: a link fix, typo, or formatting change)
+- `patch` — the diff, present only on `cosmetic` posts
+- `status`, `additions`, `deletions`, `blob_url`
+- `content_truncated` — `true` if the middle of a very long post was omitted; the head and tail are always intact
 
-```bash
-gh api "repos/sr320/tumbling-oysters/commits/<SHA>" \
-  --jq '[.files[].filename] | map(select(startswith("posts/") and endswith(".qmd"))) | .[]'
-```
+`commits_scanned` is useful context when reporting no activity: it tells you whether the repo was quiet entirely or merely had no post changes.
 
-Deduplicate across all commits — if the same file appears in multiple commits, only process it once.
+## Step 2 — Handle empty results, errors, and warnings
 
-## Step 3 — Fetch raw post content
+If `posts` is empty, report: "No new or updated posts in sr320/tumbling-oysters in the last 7 days."
 
-For each unique file path (e.g. `posts/84-trout-meth/index.qmd`), fetch the raw content:
+If the JSON contains an `error` key, the script exited non-zero — return that error message rather than a summary, and do not fall back to calling the API by hand. A rate-limit error means `GITHUB_TOKEN` should be set in the environment.
 
-```bash
-curl -s "https://raw.githubusercontent.com/sr320/tumbling-oysters/main/<path>"
-```
+If `warnings` is non-empty, append each one as a bullet under a `**Warnings**` line at the end of your summary.
 
-## Step 4 — Parse and summarize each post
+## Step 3 — Summarize each post
 
-From the raw `.qmd` content, extract:
+For posts with `change_class: substantive`, parse `content` and extract:
 
-**From the YAML front matter** (between the opening `---` and closing `---`):
-- `title`
-- `author`
-- `date`
-- `categories` (list)
+**From the YAML front matter** (between the opening `---` and closing `---`): `title`, `author`, `date`, `categories`.
 
-**From the body**, synthesize:
-- **Key finding**: 2–3 sentences capturing the main question, method, and result or conclusion. Focus on section headings like "What we found", "Results", "Conclusion", or the final paragraphs if none exist. Do not quote verbatim — paraphrase.
+**From the body**, synthesize a **Key finding**: 2–3 sentences capturing the main question, method, and result or conclusion. Focus on section headings like "What we found", "Results", "Conclusion", or the final paragraphs if none exist. Do not quote verbatim — paraphrase.
 
-**Figure links**: scan the full content for both syntaxes:
+**Figure links**: scan `content` for both syntaxes:
 - Markdown: `![alt](url)` — capture the URL
 - HTML: `<img src="url"` — capture the src value
 
 Classify each link as `local` (relative path, no `http`) or `external` (starts with `http`).
 
-## Step 5 — Write the digest to the repo
+For posts with `change_class: cosmetic`, the post is not new work — it was only lightly edited this week. Still report its `title`, `author`, `date`, and `categories` from the front matter in `content`, but replace the **Key finding** line with a **Change this week** line describing what the `patch` actually did. Do not list its figures.
 
-Write the full structured summary to:
-`digests/tumbling-oysters-YYYY-MM-DD.md`
+## Step 4 — Assemble the summary
 
-where the date is today's date. The path is relative to the repository root, which is the working directory Claude Code starts in. Use this file header:
+Use this header:
 
 ```
 # Tumbling Oysters Digest — Week of [week_start] to [today]
@@ -77,7 +76,7 @@ Then one block per post, separated by `---`, in this format:
 - **Author**: [author]
 - **Date**: [date]
 - **Categories**: [comma-separated categories]
-- **Key finding**: [2-3 sentence synthesis]
+- **Key finding**: [2-3 sentence synthesis]      ← or **Change this week** for cosmetic edits
 - **Figures**:
   - local: [relative path] (if any)
   - external: [full URL] (if any)
@@ -85,8 +84,11 @@ Then one block per post, separated by `---`, in this format:
 
 Group posts chronologically by date (oldest first).
 
-If no `.qmd` files under `posts/` changed in the last 7 days, write and return: "No new or updated posts in sr320/tumbling-oysters in the last 7 days."
+## Step 5 — Write the digest to the repo, when asked for a file
 
-## Step 6 — Return summary and file path
+If you were invoked to produce a **standalone digest**, write the summary from Step 4 to:
+`digests/tumbling-oysters-YYYY-MM-DD.md`
 
-Return the structured summary to the main conversation (same content as the file), and note the file path written so the user knows to commit it.
+where the date is today's date. The path is relative to the repository root, which is the working directory Claude Code starts in. Then return the same content to the conversation along with the file path, so the caller knows to commit it.
+
+If you were invoked only to **return a summary** — for example by the `full-lab-digest` skill, which compiles all five sources into one file of its own — skip the file write entirely and just return the Step 4 summary. Writing a per-source file in that case duplicates content that the caller is about to write anyway.

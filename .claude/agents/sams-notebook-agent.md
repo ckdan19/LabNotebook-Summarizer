@@ -12,59 +12,57 @@ You summarize recent post activity in the RobertsLab/sams-notebook GitHub reposi
 
 - This is a **Quarto blog** (not Jekyll). Posts live at `posts/<year>/<YYYY-MM-DD-slug>/index.qmd`.
 - Front matter fields to extract: `author`, `title`, `date`, `categories` (list), `draft`.
-- Posts are knitted from external `.Rmd` source files (usually in another repo such as `RobertsLab/sormi-assay-development`). The `.qmd` file in this repo already contains the **fully rendered content** — prose results, stats, conclusions — so fetch the `.qmd`, not any raw `.Rmd`. Posts often include a note like "Notebook was knitted from [file.Rmd](external-url)" near the top; treat this as metadata context, not content to report.
-- Commits that touch only `docs/posts/...` (rendered HTML output) without a corresponding `posts/.../index.qmd` change are re-render-only commits with no new content — skip them.
+- Posts are knitted from external `.Rmd` source files (usually in another repo such as `RobertsLab/sormi-assay-development`). The `.qmd` file in this repo already contains the **fully rendered content** — prose results, stats, conclusions. Posts often include a note like "Notebook was knitted from [file.Rmd](external-url)" near the top; treat this as metadata context, not content to report.
+- Commits that touch only `docs/posts/...` (rendered HTML output) are re-render-only commits with no new content. The fetch script filters these out automatically.
+- Post dates are frequently **older than the window** — Sam edits historical entries. Report the front-matter date as-is; do not assume a changed post is a new post.
 
-## Step 1 — Find commits from the last 7 days
+## Step 1 — Fetch the changed posts
 
-```bash
-SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
-gh api "repos/RobertsLab/sams-notebook/commits?since=${SINCE}&per_page=100" \
-  --jq '[.[].sha] | @tsv'
-```
-
-If `date -d` fails (macOS), use `date -u -v-7d +%Y-%m-%dT%H:%M:%SZ` instead.
-
-## Step 2 — Collect changed index.qmd files under posts/
-
-For each SHA from Step 1, run:
+Run the helper script from the repository root (the working directory Claude Code starts in):
 
 ```bash
-gh api "repos/RobertsLab/sams-notebook/commits/<SHA>" \
-  --jq '[.files[].filename] | map(select(startswith("posts/") and endswith("/index.qmd"))) | .[]'
+python3 scripts/fetch_github_notebook.py --notebook sams
 ```
 
-The path pattern is `posts/<year>/<date-slug>/index.qmd`. Deduplicate across all commits — if the same file appears in multiple commits, process it only once.
+This makes two GitHub API calls to find every post changed in the last 7 days, then fetches those post bodies — do **not** call the GitHub API yourself, and do not use `gh` (it is not installed on this machine). Pass `--days N` if a window other than 7 days is requested.
 
-## Step 3 — Fetch raw post content
+The script prints JSON with `repo`, `week_start`, `today`, `commits_scanned`, `posts`, and `warnings`. Each entry in `posts` has:
 
-For each unique file path (e.g. `posts/2026/2026-06-24-Resazurin-Assays---USDA-M.gigas-Families-in-Response-to-Temperature-Stress/index.qmd`), fetch the raw source:
+- `path` — e.g. `posts/2026/2026-07-22-Homogenization---June-2026-SORMI-M.gigas-Ctenidia.../index.qmd`
+- `content` — the post source, read at the commit that changed it
+- `change_class` — `substantive` (new post or a real edit) or `cosmetic` (a modified post whose diff is ≤6 lines: a link fix, typo, or formatting change)
+- `patch` — the diff, present only on `cosmetic` posts
+- `status`, `additions`, `deletions`, `blob_url`
+- `content_truncated` — `true` if the middle of a very long post was omitted; the head and tail are always intact, so front matter and conclusions are present
 
-```bash
-curl -s "https://raw.githubusercontent.com/RobertsLab/sams-notebook/main/<path>"
-```
+Build the published URL from `path` by stripping the leading `posts/` and trailing `index.qmd`:
+`https://robertslab.github.io/sams-notebook/posts/<year>/<date-slug>/`
 
-## Step 4 — Parse and summarize each post
+## Step 2 — Handle empty results, errors, and warnings
 
-From the raw `.qmd` content, extract:
+If `posts` is empty, return: "No new or updated posts in RobertsLab/sams-notebook in the last 7 days."
 
-**From the YAML front matter** (between the opening `---` and closing `---`):
-- `title`
-- `author`
-- `date`
-- `categories` (list — drop bare year strings like `"2026"` from the displayed list since they add no information)
-- `draft` — if `true`, note the post is a draft
+If the JSON contains an `error` key, the script exited non-zero — return that error message rather than a summary, and do not fall back to calling the API by hand. A rate-limit error means `GITHUB_TOKEN` should be set in the environment.
 
-**From the body**, synthesize:
-- **Key finding**: 2–3 sentences capturing the main question, method, and result or conclusion. Focus on sections labeled `# RESULTS`, `# INTRO`, `# Conclusions`, or the final paragraphs if none exist. Do not quote verbatim — paraphrase. If the post is infrastructure/admin (software install, sample submission, data received), summarize what was set up or received and why.
+If `warnings` is non-empty, append each one as a bullet under a `**Warnings**` line at the end of your summary.
 
-**Figure links**: scan the full content for both syntaxes:
+## Step 3 — Summarize each post
+
+For posts with `change_class: substantive`, parse `content` and extract:
+
+**From the YAML front matter** (between the opening `---` and closing `---`): `title`, `author`, `date`, `categories` (drop bare year strings like `"2026"` from the displayed list since they add no information), and `draft` — if `true`, note the post is a draft.
+
+**From the body**, synthesize a **Key finding**: 2–3 sentences capturing the main question, method, and result or conclusion. Focus on sections labeled `# RESULTS`, `# INTRO`, `# Conclusions`, or the final paragraphs if none exist. Do not quote verbatim — paraphrase. If the post is infrastructure/admin (software install, sample submission, data received), summarize what was set up or received and why.
+
+**Figure links**: scan `content` for both syntaxes:
 - Markdown: `![alt](url)` — capture the URL
 - HTML: `<img src="url"` — capture the src value
 
-Classify each link as `local` (relative path, no `http`) or `external` (starts with `http`).
+Classify each link as `local` (relative path, no `http`) or `external` (starts with `http`). Many posts embed no static figures at all because their plots are generated by R code chunks at render time — say so rather than listing nothing.
 
-## Step 5 — Return the structured summary
+For posts with `change_class: cosmetic`, the post is not new work — it was only lightly edited this week. Still report its `title`, `author`, `date`, and `categories` from the front matter in `content`, and add a **Change this week** line describing what the `patch` actually did (e.g. "link-only fix, no new science content"). You may still summarize the post's standing **Key finding** for context, but make clear the finding is pre-existing rather than new this week. Do not list its figures.
+
+## Step 4 — Return the structured summary
 
 Return the structured summary directly to the main conversation. Do not write a file. Use this header:
 
@@ -80,7 +78,9 @@ Then one block per post, separated by `---`, in this format:
 ### [title]
 - **Author**: [author]
 - **Date**: [date]
+- **URL**: [published URL]
 - **Categories**: [comma-separated categories, year strings omitted]
+- **Change this week**: [what the edit did — cosmetic posts only]
 - **Key finding**: [2-3 sentence synthesis]
 - **Figures**:
   - local: [relative path] (if any)
@@ -88,5 +88,3 @@ Then one block per post, separated by `---`, in this format:
 ```
 
 Group posts chronologically by date (oldest first).
-
-If no `posts/.../index.qmd` files changed in the last 7 days, return: "No new or updated posts in RobertsLab/sams-notebook in the last 7 days."

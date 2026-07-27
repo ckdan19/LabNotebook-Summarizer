@@ -11,6 +11,7 @@ LabNotebook-Summarizer aggregates posts from five different lab notebook sources
 ```
 LabNotebook-Summarizer/
 ├── scripts/
+│   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
 │   └── publish_digest.py    # Converts a digest to sanitized HTML and posts it as a WP draft
 ├── digests/                 # Generated weekly digest files (Markdown)
@@ -29,10 +30,29 @@ The tool currently monitors five notebook sources:
 | Tumbling Oysters (Steven Roberts) | GitHub | [sr320/tumbling-oysters](https://github.com/sr320/tumbling-oysters) |
 | Ariana Huffmyer Lab Notebook | GitHub | [AHuffmyer/ahuffmyer.github.io](https://github.com/AHuffmyer/ahuffmyer.github.io) |
 | Sam's Notebook (Sam White) | GitHub | [RobertsLab/sams-notebook](https://github.com/RobertsLab/sams-notebook) |
-| Grace Crandall's Notebook | GitHub | [RobertsLab/grace-crandall-notebook](https://github.com/RobertsLab/grace-crandall-notebook) |
+| Grace Crandall's Notebook | GitHub | [grace-ac/grace-ac.github.io](https://github.com/grace-ac/grace-ac.github.io) |
 | Genefish WordPress | WordPress | [genefish.wordpress.com](https://genefish.wordpress.com) |
 
 ## Scripts
+
+### `scripts/fetch_github_notebook.py`
+
+Returns JSON describing every notebook post changed in the last 7 days in one of the four GitHub-hosted notebooks, for use by the notebook subagents:
+
+```bash
+python3 scripts/fetch_github_notebook.py --notebook sams        # or: ariana, grace, tumbling-oysters
+python3 scripts/fetch_github_notebook.py --notebook grace --days 21
+```
+
+Each post carries its `content`, `status`, diff line counts, and a `change_class` of `substantive` or `cosmetic`. Cosmetic edits — modified posts whose diff is 6 lines or fewer — report their `patch` and only the opening of the post, so a one-line link fix is not summarized as new science.
+
+Three design points keep this fast and correct:
+
+- **Two API calls locate everything.** A commit listing plus a single `compare` over the whole range replaces one API call per commit.
+- **Post bodies are read at the commit SHA**, not off a branch name. `sams-notebook` and `grace-ac.github.io` default to `master` while the other two use `main`; reading at the SHA sidesteps that difference entirely.
+- **Long posts are clipped from the middle**, never the end, so front matter and conclusions both survive. A `content_truncated` flag and a warning mark any post this affected.
+
+Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API rate limit from 60 to 5,000 requests per hour. Without it a full five-source digest run consumes roughly 10 of the 60 available calls. An exhausted limit produces a single actionable error rather than a partial digest.
 
 ### `scripts/fetch_lab_posts.py`
 
@@ -111,9 +131,9 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 
 ## Requirements
 
-- Python 3.8+ — stdlib only for `fetch_lab_posts.py`
+- Python 3.8+ — stdlib only for `fetch_lab_posts.py` and `fetch_github_notebook.py`
 - `python-markdown` (`pip install markdown`) or `pandoc` — only for `publish_digest.py`
-- `gh` (authenticated) and `curl` — used by the GitHub notebook subagents
+- `GITHUB_TOKEN` or `GH_TOKEN` in the environment — optional, but raises the GitHub API rate limit from 60 to 5,000 requests/hour. The `gh` CLI is **not** required.
 - Claude Code (for running skills)
 - Internet access to the WordPress REST API and GitHub
 - A WordPress.com API token at `~/.config/LabNotebook-Summarizer/wp_token` (mode 600) — only for publishing
