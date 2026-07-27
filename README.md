@@ -6,6 +6,74 @@ A tool that summarizes lab notebook posts from [Roberts Lab](https://robertslab.
 
 LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes, and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a Python data-fetching script.
 
+## For Claude Desktop / GUI Users
+
+You do not need to run any Python yourself. The skills and subagents in this repo are triggered by plain English — open the project in Claude and ask for what you want.
+
+### Setup (once)
+
+1. Install the [Claude desktop app](https://claude.ai/download) and sign in.
+2. Clone this repository: `git clone https://github.com/ckdan19/LabNotebook-Summarizer.git`
+3. In Claude, open a Claude Code session **with this repository as the working directory**. The skills in `.claude/skills/` and subagents in `.claude/agents/` load automatically from the project folder — if you open a different folder, none of the requests below will work.
+4. *(Optional but recommended)* Set `GITHUB_TOKEN` in your environment to raise the GitHub API rate limit. Without it, one full digest run uses about 10 of your 60 hourly calls.
+5. *(Only if you want to publish)* Save a WordPress.com API token to `~/.config/LabNotebook-Summarizer/wp_token` with `chmod 600`.
+
+Then just type a request in the chat box.
+
+### What you can ask
+
+**Get the full weekly digest** — the main thing this tool does. Runs all five notebooks in parallel, then adds cross-notebook patterns and literature connections.
+
+> "Give me the full lab digest for this week"
+>
+> "Summarize all five lab notebooks and save the digest"
+
+**Check one notebook** — faster when you only care about one person.
+
+> "What's new in Ariana's notebook this week?"
+>
+> "What did Sam post recently?"
+>
+> "Summarize recent Grace Crandall posts"
+>
+> "What's new in tumbling-oysters?"
+>
+> "What did the lab post on WordPress this week?"
+
+**Change the time window** — single-notebook requests default to 7 days but accept any window.
+
+> "What's new in Sam's notebook over the last 3 weeks?"
+>
+> "Summarize Ariana's posts from the last 30 days"
+
+The **full** lab digest is fixed at 7 days. For a longer combined window, ask for each notebook separately.
+
+**Connect a finding to the literature** — searches PubMed and preprint servers for the last 12 months and labels each paper *Supports*, *Conflicts*, *Adds context*, or *Suggests next step*.
+
+> "Find recent papers on thermal hardening in Pacific oysters, and compare them to our finding that 35°C exposure improved subsequent survival"
+
+This one needs two things from you: the **topic** to search, and the **specific finding** to compare against. If you leave out the finding, Claude will ask for it — it can't categorize papers without something to categorize them against.
+
+**Publish a digest to WordPress** — always creates a **draft**, never a live post, so you review before it goes public.
+
+> "Publish this week's digest to WordPress"
+>
+> "Post the July 21 digest as a WordPress draft"
+
+**Ask about past digests** — everything generated is kept in `digests/`.
+
+> "What did we cover in last week's digest?"
+>
+> "Has anyone mentioned GlycogenGlo assays in the past month of digests?"
+
+### What to expect
+
+- A full digest launches five subagents at once and takes a few minutes. Claude will show them running in parallel — that's normal.
+- Digests are written to `digests/` as Markdown. Ask Claude to show you the file if you'd rather read it in the chat.
+- A source with no posts that week is reported as "no activity" rather than silently dropped.
+- Small edits to a post — a fixed typo or link, six diff lines or fewer — are flagged as cosmetic and are not written up as new science.
+- If a notebook fetch fails (rate limit, network), Claude will tell you which source failed instead of quietly returning a partial digest.
+
 ## Repository Structure
 
 ```
