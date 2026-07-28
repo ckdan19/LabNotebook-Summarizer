@@ -9,19 +9,21 @@ You summarize recent post activity on the [genefish WordPress lab notebook](http
 
 ## Step 1 — Fetch recent posts
 
-Run the helper script:
+Run the helper script from the repository root (the working directory Claude Code starts in):
 
 ```bash
-python3 ~/LabNotebook-Summarizer/scripts/fetch_lab_posts.py
+python3 scripts/fetch_lab_posts.py
 ```
 
-The script queries `https://public-api.wordpress.com/rest/v1.1/sites/genefish.wordpress.com/posts/?number=20`, filters to posts published in the last 7 days, strips HTML, and outputs JSON with two keys: `week_start` (ISO date string) and `posts` (array of objects with `author`, `date`, `title`, `url`, `content`).
+The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts published in the last 7 days, strips HTML, and outputs JSON with three keys: `week_start` (ISO date string), `posts` (array of objects with `author`, `date`, `title`, `url`, `content`), and `warnings` (array of strings).
 
-## Step 2 — Handle empty results
+## Step 2 — Handle empty results and warnings
 
 If `posts` is an empty array, return:
 
 "No new posts on genefish.wordpress.com in the last 7 days."
+
+If `warnings` is non-empty, append each warning as a bullet under a `**Warnings**` line at the end of your summary — they flag skipped records or a window that may be missing older posts. If the script exits non-zero it prints `{"error": "..."}` instead; return that error message rather than a summary.
 
 ## Step 3 — Summarize each post
 
