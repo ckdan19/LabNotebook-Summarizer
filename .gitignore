@@ -430,3 +430,7 @@ FodyWeavers.xsd
 
 # macOS
 .DS_Store
+
+# Generated digest narration (keep the directory via .gitkeep)
+text_to_speech/output/*
+!text_to_speech/output/.gitkeep
