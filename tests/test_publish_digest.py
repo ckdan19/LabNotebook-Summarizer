@@ -4,10 +4,13 @@ import sys
 import os
 import io
 import json
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import publish_digest
@@ -202,6 +205,186 @@ class TestSplitDigest(unittest.TestCase):
             self.assertEqual(title, "Lab Digest — Week of 2026-07-28")
         finally:
             os.unlink(path)
+
+
+class TestReadToken(unittest.TestCase):
+    """The token is a live credential: absence, emptiness, and loose modes all matter."""
+
+    def _write_token(self, content, mode=0o600):
+        fd, path = tempfile.mkstemp(suffix=".token")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.chmod(path, mode)
+        return path
+
+    def test_missing_file_raises_with_setup_guidance(self):
+        with self.assertRaises(FileNotFoundError) as ctx:
+            publish_digest.read_token("/nonexistent/path/wp_token")
+        self.assertIn("developer.wordpress.com", str(ctx.exception))
+
+    def test_empty_file_raises_value_error(self):
+        path = self._write_token("")
+        try:
+            with self.assertRaises(ValueError):
+                publish_digest.read_token(path)
+        finally:
+            os.unlink(path)
+
+    def test_whitespace_only_file_raises_value_error(self):
+        path = self._write_token("   \n\t\n")
+        try:
+            with self.assertRaises(ValueError):
+                publish_digest.read_token(path)
+        finally:
+            os.unlink(path)
+
+    def test_token_is_stripped_of_surrounding_whitespace(self):
+        path = self._write_token("  abc123\n")
+        try:
+            token, _ = publish_digest.read_token(path)
+            self.assertEqual(token, "abc123")
+        finally:
+            os.unlink(path)
+
+    def test_private_mode_produces_no_warning(self):
+        path = self._write_token("abc123", mode=0o600)
+        try:
+            _, warnings = publish_digest.read_token(path)
+            self.assertEqual(warnings, [])
+        finally:
+            os.unlink(path)
+
+    def test_world_readable_mode_warns_with_chmod_hint(self):
+        path = self._write_token("abc123", mode=0o644)
+        try:
+            _, warnings = publish_digest.read_token(path)
+            self.assertEqual(len(warnings), 1)
+            self.assertIn("chmod 600", warnings[0])
+        finally:
+            os.unlink(path)
+
+    def test_group_readable_mode_warns(self):
+        path = self._write_token("abc123", mode=0o640)
+        try:
+            _, warnings = publish_digest.read_token(path)
+            self.assertEqual(len(warnings), 1)
+        finally:
+            os.unlink(path)
+
+
+class TestPostDraft(unittest.TestCase):
+    """post_draft must send the token only in a header and never echo it back."""
+
+    class _FakeResponse:
+        def __init__(self, status, body):
+            self.status = status
+            self._body = body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return self._body
+
+    def test_token_sent_as_bearer_header_and_status_is_draft(self):
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["auth"] = request.headers.get("Authorization")
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            captured["url"] = request.full_url
+            return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
+
+        with patch("publish_digest.urlopen", side_effect=fake_urlopen):
+            status, payload = publish_digest.post_draft(
+                "example.wordpress.com", "sekrit", "My Title", "<p>Body</p>"
+            )
+
+        self.assertEqual(status, 201)
+        self.assertEqual(captured["auth"], "Bearer sekrit")
+        self.assertEqual(captured["payload"]["status"], "draft")
+        self.assertEqual(captured["payload"]["title"], "My Title")
+        # The token must never travel in the URL, where it would land in logs.
+        self.assertNotIn("sekrit", captured["url"])
+        self.assertEqual(payload["ID"], 1)
+
+    def test_reflected_token_in_error_body_is_redacted(self):
+        token = "super-secret-token"
+        body = json.dumps(
+            {"error": "invalid_token", "message": "token %s was rejected" % token}
+        ).encode("utf-8")
+        error = HTTPError("https://api", 401, "Unauthorized", {}, io.BytesIO(body))
+
+        with patch("publish_digest.urlopen", side_effect=error):
+            status, payload = publish_digest.post_draft(
+                "example.wordpress.com", token, "T", "<p>c</p>"
+            )
+
+        self.assertEqual(status, 401)
+        rendered = json.dumps(payload)
+        self.assertNotIn(token, rendered)
+        self.assertIn("[redacted]", rendered)
+
+    def test_reflected_token_in_non_json_error_body_is_redacted(self):
+        token = "super-secret-token"
+        body = ("<html>token %s rejected</html>" % token).encode("utf-8")
+        error = HTTPError("https://api", 500, "Server Error", {}, io.BytesIO(body))
+
+        with patch("publish_digest.urlopen", side_effect=error):
+            status, payload = publish_digest.post_draft(
+                "example.wordpress.com", token, "T", "<p>c</p>"
+            )
+
+        self.assertEqual(status, 500)
+        self.assertIn("raw", payload)
+        self.assertNotIn(token, json.dumps(payload))
+
+    def test_non_json_error_body_is_truncated(self):
+        error = HTTPError("https://api", 500, "Server Error", {}, io.BytesIO(b"x" * 5000))
+
+        with patch("publish_digest.urlopen", side_effect=error):
+            _, payload = publish_digest.post_draft(
+                "example.wordpress.com", "tok", "T", "<p>c</p>"
+            )
+
+        self.assertLessEqual(len(payload["raw"]), 1000)
+
+
+class TestMarkdownToHtml(unittest.TestCase):
+
+    def test_pandoc_used_when_python_markdown_missing(self):
+        completed = SimpleNamespace(stdout="<p>hi</p>", stderr="")
+        # sys.modules[name] = None makes "import name" raise ImportError.
+        with patch.dict(sys.modules, {"markdown": None}):
+            with patch("publish_digest.subprocess.run", return_value=completed) as run:
+                html_out, converter = publish_digest.markdown_to_html("hi")
+
+        self.assertEqual(converter, "pandoc")
+        self.assertEqual(html_out, "<p>hi</p>")
+        # raw_html must stay disabled so embedded HTML cannot bypass the sanitizer.
+        self.assertIn("markdown-raw_html", run.call_args[0][0])
+
+    def test_missing_both_converters_raises_runtime_error(self):
+        with patch.dict(sys.modules, {"markdown": None}):
+            with patch("publish_digest.subprocess.run", side_effect=FileNotFoundError()):
+                with self.assertRaises(RuntimeError) as ctx:
+                    publish_digest.markdown_to_html("hi")
+
+        message = str(ctx.exception)
+        self.assertIn("pandoc", message)
+        self.assertIn("pip install markdown", message)
+
+    def test_pandoc_failure_surfaces_stderr(self):
+        failure = subprocess.CalledProcessError(1, ["pandoc"], stderr="pandoc exploded")
+        with patch.dict(sys.modules, {"markdown": None}):
+            with patch("publish_digest.subprocess.run", side_effect=failure):
+                with self.assertRaises(RuntimeError) as ctx:
+                    publish_digest.markdown_to_html("hi")
+
+        self.assertIn("pandoc exploded", str(ctx.exception))
 
 
 class TestDryRun(unittest.TestCase):

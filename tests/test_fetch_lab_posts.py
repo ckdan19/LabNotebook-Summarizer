@@ -205,6 +205,65 @@ class TestCollectPostsPaging(unittest.TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertIn("5 pages", warnings[0])
 
+    def test_unreadable_date_warns_and_skips_only_that_post(self):
+        cutoff = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        broken = self._wp_post(7, "not a date", "Broken Date")
+        good = self._wp_post(8, "2026-07-25T12:00:00Z", "Good Date")
+
+        with patch("fetch_lab_posts.fetch_page",
+                   side_effect=[{"posts": [broken, good]}, {"posts": []}]):
+            posts, warnings = fetch_lab_posts.collect_posts(
+                "example.com", cutoff, per_page=100, max_pages=2, timeout=15
+            )
+
+        titles = [p["title"] for p in posts]
+        self.assertNotIn("Broken Date", titles)
+        self.assertIn("Good Date", titles)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("7", warnings[0])
+        self.assertIn("unreadable date", warnings[0])
+
+    def test_excerpt_used_when_content_absent(self):
+        cutoff = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        post = self._wp_post(5, "2026-07-25T12:00:00Z")
+        del post["content"]
+        post["excerpt"] = "<p>Excerpt text.</p>"
+
+        with patch("fetch_lab_posts.fetch_page",
+                   side_effect=[{"posts": [post]}, {"posts": []}]):
+            posts, _ = fetch_lab_posts.collect_posts(
+                "example.com", cutoff, per_page=100, max_pages=2, timeout=15
+            )
+
+        self.assertEqual(posts[0]["content"], "Excerpt text.")
+
+    def test_empty_content_falls_back_to_excerpt(self):
+        cutoff = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        post = self._wp_post(6, "2026-07-25T12:00:00Z")
+        post["content"] = ""
+        post["excerpt"] = "<p>Fallback body.</p>"
+
+        with patch("fetch_lab_posts.fetch_page",
+                   side_effect=[{"posts": [post]}, {"posts": []}]):
+            posts, _ = fetch_lab_posts.collect_posts(
+                "example.com", cutoff, per_page=100, max_pages=2, timeout=15
+            )
+
+        self.assertEqual(posts[0]["content"], "Fallback body.")
+
+    def test_missing_author_falls_back_to_unknown(self):
+        cutoff = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        post = self._wp_post(9, "2026-07-25T12:00:00Z")
+        post["author"] = None
+
+        with patch("fetch_lab_posts.fetch_page",
+                   side_effect=[{"posts": [post]}, {"posts": []}]):
+            posts, _ = fetch_lab_posts.collect_posts(
+                "example.com", cutoff, per_page=100, max_pages=2, timeout=15
+            )
+
+        self.assertEqual(posts[0]["author"], "Unknown")
+
     def test_post_fields_mapped_correctly(self):
         cutoff = datetime(2020, 1, 1, tzinfo=timezone.utc)
         recent = "2026-07-25T09:00:00Z"
