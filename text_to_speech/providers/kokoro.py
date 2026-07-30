@@ -8,6 +8,7 @@ class KokoroProvider(SpeechProvider):
     """Generate speech with hexgrad's official ``kokoro`` inference package."""
 
     SAMPLE_RATE = 24000
+    REPO_ID = "hexgrad/Kokoro-82M"
 
     def __init__(self, voice: str = "af_heart", language: str = "a", speed: float = 1.0):
         if speed <= 0:
@@ -23,7 +24,7 @@ class KokoroProvider(SpeechProvider):
         self.voice = voice
         self.speed = speed
         try:
-            self.pipeline = KPipeline(lang_code=language)
+            self.pipeline = KPipeline(lang_code=language, repo_id=self.REPO_ID)
         except Exception as exc:
             raise ProviderUnavailable("Kokoro could not load: {}".format(exc)) from exc
 

@@ -59,6 +59,22 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _progress_reporter():
+    """Return a stderr progress callback, or None when output is not a terminal."""
+    if not sys.stderr.isatty():
+        return None
+
+    def report(index: int, total: int) -> None:
+        print(
+            "\rSynthesizing chunk {}/{}...".format(index, total),
+            end="",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    return report
+
+
 def _default_output(digest: Path, provider: str, style: str = "direct") -> Path:
     suffix = "-conversational" if style == "conversational" else ""
     filename = "{}-{}{}.wav".format(digest.stem, provider, suffix)
@@ -102,13 +118,17 @@ def main() -> None:
             speed=args.speed,
             voice_sample=args.voice_sample,
         )
+        progress = _progress_reporter()
         generated_chunks = generate_audio(
             narration,
             output,
             provider,
             chunk_chars=args.chunk_chars,
             pause_seconds=args.pause,
+            progress=progress,
         )
+        if progress is not None:
+            print("\r\033[KSynthesized {} chunks.".format(generated_chunks), file=sys.stderr)
         print(json.dumps(
             {
                 "status": "audio generated",

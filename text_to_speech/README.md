@@ -96,6 +96,16 @@ the spoken presentation. Conversational output gets a `-conversational` filename
 suffix so it does not overwrite a direct recording. Use
 `--output path/to/file.wav` to override the output location.
 
+## Reading the output
+
+A full digest takes several minutes to synthesize. When run in a terminal, the
+chunk counter (`Synthesizing chunk 12/135...`) is written to stderr so a long run
+is visibly alive; stdout stays a single JSON object, and the counter is suppressed
+when stderr is redirected. Torch's `dropout`/`weight_norm` notices come from the
+engine packages themselves and are harmless. A failed run prints
+`{"error": ...}` and exits non-zero, so a `"status": "audio generated"` object
+means the WAV was written.
+
 ## Design boundary
 
 `digest.py` is the Markdown-to-speech preparation layer. `providers/` contains the
