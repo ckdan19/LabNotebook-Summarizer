@@ -28,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="also narrate cross-notebook and literature sections",
     )
     parser.add_argument(
+        "--style",
+        choices=("direct", "conversational"),
+        default="direct",
+        help="narration style (default: direct)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="print the prepared narration without loading a speech model",
@@ -53,8 +59,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _default_output(digest: Path, provider: str) -> Path:
-    filename = "{}-{}.wav".format(digest.stem, provider)
+def _default_output(digest: Path, provider: str, style: str = "direct") -> Path:
+    suffix = "-conversational" if style == "conversational" else ""
+    filename = "{}-{}{}.wav".format(digest.stem, provider, suffix)
     return Path(__file__).resolve().parent / "output" / filename
 
 
@@ -63,9 +70,13 @@ def main() -> None:
     args = parser.parse_args()
     try:
         markdown = args.digest.read_text(encoding="utf-8")
-        narration = digest_to_narration(markdown, include_analysis=args.include_analysis)
+        narration = digest_to_narration(
+            markdown,
+            include_analysis=args.include_analysis,
+            style=args.style,
+        )
         chunks = chunk_narration(narration, max_chars=args.chunk_chars)
-        output = args.output or _default_output(args.digest, args.provider)
+        output = args.output or _default_output(args.digest, args.provider, args.style)
 
         if args.dry_run:
             print(json.dumps(
@@ -73,6 +84,7 @@ def main() -> None:
                     "dry_run": True,
                     "digest": str(args.digest),
                     "provider": args.provider,
+                    "style": args.style,
                     "output": str(output),
                     "characters": len(narration),
                     "chunks": len(chunks),
@@ -102,6 +114,7 @@ def main() -> None:
                 "status": "audio generated",
                 "digest": str(args.digest),
                 "provider": args.provider,
+                "style": args.style,
                 "output": str(output),
                 "chunks": generated_chunks,
             },

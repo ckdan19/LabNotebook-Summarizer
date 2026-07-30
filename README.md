@@ -189,6 +189,9 @@ Preview the speech-ready text without installing a model:
 python3 -m text_to_speech digests/full-lab-digest-2026-07-28-7d.md --dry-run
 ```
 
+Add `--style conversational` for a more natural spoken script with transitions;
+the default `direct` style stays close to the written summary.
+
 See [`text_to_speech/README.md`](text_to_speech/README.md) for Python 3.11 setup,
 provider installation, voice options, and generation commands.
 

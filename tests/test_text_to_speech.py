@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from text_to_speech.audio import AudioSegment, write_wav
+from text_to_speech.cli import _default_output, build_parser
 from text_to_speech.digest import chunk_narration, digest_to_narration
 from text_to_speech.engine import generate_audio
 from text_to_speech.providers.base import SpeechProvider
@@ -103,6 +104,43 @@ class TestDigestNarration(unittest.TestCase):
         self.assertNotIn("https://", result)
         self.assertNotIn("(`", result)
 
+    def test_conversational_style_adds_transitions_and_spoken_fields(self):
+        result = digest_to_narration(SAMPLE_DIGEST, style="conversational")
+        self.assertIn("Here's your lab notebook update.", result)
+        self.assertIn("Let's start with Ariana Huffmyer Lab Notebook.", result)
+        self.assertIn("First up: Thermal hardening trial.", result)
+        self.assertIn("This update comes from Ariana.", result)
+        self.assertIn("It was posted on July 25, 2026.", result)
+        self.assertIn("Here's the main takeaway.", result)
+        self.assertIn("That's the latest from the lab notebooks.", result)
+        self.assertNotIn("Author:", result)
+        self.assertNotIn("Key finding:", result)
+
+    def test_conversational_style_can_include_analysis(self):
+        result = digest_to_narration(
+            SAMPLE_DIGEST,
+            include_analysis=True,
+            style="conversational",
+        )
+        self.assertIn("Now, let's turn to Cross-Notebook Patterns & Connections.", result)
+        self.assertIn("First up: Shared Themes.", result)
+
+    def test_conversational_style_ignores_embedded_digest_h1(self):
+        markdown = """# Combined Digest
+
+## Source
+# Source Digest
+### Update
+- **Key finding**: Useful result.
+"""
+        result = digest_to_narration(markdown, style="conversational")
+        self.assertEqual(result.count("Here's your lab notebook update."), 1)
+        self.assertNotIn("Source Digest", result)
+
+    def test_unknown_style_is_rejected(self):
+        with self.assertRaises(ValueError):
+            digest_to_narration(SAMPLE_DIGEST, style="dramatic")
+
 
 class TestChunkNarration(unittest.TestCase):
 
@@ -119,6 +157,20 @@ class TestChunkNarration(unittest.TestCase):
     def test_tiny_limit_is_rejected(self):
         with self.assertRaises(ValueError):
             chunk_narration("Text.", max_chars=20)
+
+
+class TestNarrationCLI(unittest.TestCase):
+
+    def test_style_option_defaults_to_direct(self):
+        args = build_parser().parse_args(["digest.md"])
+        self.assertEqual(args.style, "direct")
+
+    def test_conversational_output_does_not_overwrite_direct_output(self):
+        digest = Path("digests/example.md")
+        direct = _default_output(digest, "kokoro", "direct")
+        conversational = _default_output(digest, "kokoro", "conversational")
+        self.assertNotEqual(direct, conversational)
+        self.assertEqual(conversational.name, "example-kokoro-conversational.wav")
 
 
 class FakeProvider(SpeechProvider):

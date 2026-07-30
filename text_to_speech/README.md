@@ -52,6 +52,16 @@ Preview exactly what will be spoken without installing or loading a model:
 python -m text_to_speech digests/full-lab-digest-2026-07-28-7d.md --dry-run
 ```
 
+The default `direct` style stays close to the written digest. For a smoother
+spoken version with transitions, friendlier field phrasing, and a closing line,
+select the `conversational` style:
+
+```bash
+python -m text_to_speech digests/full-lab-digest-2026-07-28-7d.md \
+  --style conversational \
+  --dry-run
+```
+
 Generate with Kokoro:
 
 ```bash
@@ -81,7 +91,10 @@ contains the provider's built-in perceptual watermark.
 
 By default, narration includes notebook post summaries and omits the
 cross-notebook/literature sections. Add `--include-analysis` to narrate the entire
-digest. Use `--output path/to/file.wav` to override the output location.
+digest. Use `--style direct` (the default) or `--style conversational` to choose
+the spoken presentation. Conversational output gets a `-conversational` filename
+suffix so it does not overwrite a direct recording. Use
+`--output path/to/file.wav` to override the output location.
 
 ## Design boundary
 
@@ -90,4 +103,3 @@ only engine-specific imports. `engine.py` chunks narration and combines provider
 results, while `audio.py` owns the provider-neutral WAV format. Optional packages
 are imported lazily, so importing or testing the rest of the repository never loads
 Torch or downloads a model.
-

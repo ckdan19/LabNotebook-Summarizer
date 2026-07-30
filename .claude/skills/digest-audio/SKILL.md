@@ -15,19 +15,20 @@ version of notebook summaries, or generate speech with Kokoro or Chatterbox-Nano
 3. First run the preparation-only check:
 
    ```bash
-   python -m text_to_speech DIGEST.md --provider PROVIDER --dry-run
+   python -m text_to_speech DIGEST.md --provider PROVIDER --style STYLE --dry-run
    ```
 
    Check that the narration includes post titles and key findings and does not read
-   URLs, figure paths, or generated-at metadata.
+   URLs, figure paths, or generated-at metadata. Use `direct` unless the user asks
+   for a more natural or conversational version; in that case use
+   `--style conversational`.
 4. Generate the WAV:
 
    ```bash
-   python -m text_to_speech DIGEST.md --provider PROVIDER
+   python -m text_to_speech DIGEST.md --provider PROVIDER --style STYLE
    ```
 
    Pass any user-requested voice, speed, device, output, or `--include-analysis`
    options. A `--voice-sample` must be a recording the user is authorized to use.
 5. Return the absolute output path and render the WAV in the conversation when the
    client supports local audio playback.
-
