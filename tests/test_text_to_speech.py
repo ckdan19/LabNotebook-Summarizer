@@ -242,8 +242,9 @@ class TestProviderAdapters(unittest.TestCase):
 
         class FakePipeline:
 
-            def __init__(self, lang_code):
+            def __init__(self, lang_code, repo_id):
                 calls["language"] = lang_code
+                calls["repo_id"] = repo_id
 
             def __call__(self, text, **options):
                 calls["text"] = text
@@ -263,6 +264,8 @@ class TestProviderAdapters(unittest.TestCase):
 
         self.assertEqual(result, expected)
         self.assertEqual(calls["language"], "a")
+        # The repo_id is pinned so the pipeline cannot silently resolve elsewhere.
+        self.assertEqual(calls["repo_id"], KokoroProvider.REPO_ID)
         self.assertEqual(calls["voice"], "af_test")
         self.assertEqual(calls["speed"], 1.2)
         self.assertEqual(calls["text"], "Notebook result.")

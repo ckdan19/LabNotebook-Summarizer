@@ -2,26 +2,8 @@
 
 Improvements for LabNotebook-Summarizer, roughly in priority order.
 
----
-
-## Near term — correctness
-
-### 1. Add tests for the two Python scripts
-
-There are no tests. Both scripts have real parsing logic worth pinning:
-
-- `fetch_lab_posts.py` — `strip_html` (script/style stripping, entity unescaping),
-  `parse_date` (`Z` suffix, naive datetimes, unparseable input), and the paging
-  cutoff/`max_pages` warning behavior.
-- `publish_digest.py` — the HTML tag allowlist (that `<script>`, `<iframe>`, inline
-  handlers, and `javascript:` URLs are dropped), title extraction from the first
-  `# ` heading, and `--dry-run` never touching the token file.
-
-`fetch_github_notebook.py` is worth covering too: the `substantive` vs. `cosmetic`
-classification at the 6-line diff boundary, and middle-clipping of long posts
-(that front matter and conclusion both survive, and `content_truncated` is set).
-
-Stdlib `unittest` is enough; no new runtime dependency.
+Item numbers are stable — completed items move to the "Done" section at the bottom
+rather than being renumbered.
 
 ---
 
@@ -146,3 +128,22 @@ Agents already extract figure URLs and classify them local vs. external, but the
 combined digest drops most of that. A "Data & Figures" section per digest — linked
 project repos, external data, notable figures — would make digests more useful as an
 entry point into the actual work.
+
+---
+
+## Done
+
+### 1. Add tests for the Python scripts
+
+`tests/` covers all three scripts with stdlib `unittest` — no new runtime
+dependency, and no network access (every HTTP call is mocked). Run with
+`python3 -m unittest discover -s tests`.
+
+- `fetch_lab_posts.py` — `strip_html`, `parse_date`, the paging cutoff and
+  `max_pages` warning, the unreadable-date skip, and the excerpt fallback.
+- `publish_digest.py` — the tag allowlist, title extraction, `--dry-run` never
+  reading the token, plus token-file permission warnings and the redaction that
+  keeps a reflected credential out of error output.
+- `fetch_github_notebook.py` — the 6-line cosmetic boundary, middle-clipping,
+  compare-range construction, rate-limit messages, and an end-to-end pass over
+  `main()` covering path matching and the per-class content caps.

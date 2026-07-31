@@ -86,6 +86,7 @@ LabNotebook-Summarizer/
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
 │   └── publish_digest.py    # Converts a digest to sanitized HTML and posts it as a WP draft
 ├── text_to_speech/          # Optional, isolated Kokoro / Chatterbox-Nano digest narration
+├── tests/                   # Stdlib unittest suite for the scripts and the audio layer
 ├── digests/                 # Generated digest files (Markdown)
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
@@ -231,6 +232,27 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 ### Example cross-notebook connection (from `full-lab-digest-2026-07-21.md`)
 
 > **Thermal stress in Pacific oysters (*C. gigas*) at 35–36°C** — Two independent notebooks document active heat stress experiments on *C. gigas* this week using overlapping temperature ranges: Ariana's notebook (thermal hardening at Point Whitney) and the Genefish WordPress (Hazel's GlycogenGlo assays, Jesse's mortality assessments, and a 36°C incubator entry).
+
+## Tests
+
+Stdlib `unittest`, no dependencies and no network access — every HTTP call is mocked.
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+To run a single module:
+
+```bash
+python3 -m unittest tests.test_publish_digest
+```
+
+The suite covers the parsing and safety logic in all three scripts: HTML stripping,
+date parsing and paging in `fetch_lab_posts.py`; the sanitizer allowlist, token
+handling, and token redaction in `publish_digest.py`; and the cosmetic/substantive
+boundary, compare-range construction, and post clipping in `fetch_github_notebook.py`.
+The optional audio layer is covered too, but its provider tests stub out Kokoro and
+Chatterbox rather than loading the real models.
 
 ## Requirements
 
