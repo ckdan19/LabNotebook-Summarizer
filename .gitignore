@@ -430,3 +430,10 @@ FodyWeavers.xsd
 
 # macOS
 .DS_Store
+
+# Local text-to-speech Python environment
+.venv-tts/
+
+# Generated digest narration (keep the directory via .gitkeep)
+text_to_speech/output/*
+!text_to_speech/output/.gitkeep

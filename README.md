@@ -85,6 +85,8 @@ LabNotebook-Summarizer/
 │   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
 │   └── publish_digest.py    # Converts a digest to sanitized HTML and posts it as a WP draft
+├── text_to_speech/          # Optional, isolated Kokoro / Chatterbox-Nano digest narration
+├── tests/                   # Stdlib unittest suite for the scripts and the audio layer
 ├── digests/                 # Generated digest files (Markdown)
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
@@ -175,6 +177,25 @@ Handling notes:
 
 Requires `python-markdown` (`pip install markdown`) or `pandoc`. Neither is a stdlib module, and the script reports a clear error if both are absent.
 
+### Digest audio (`text_to_speech/`)
+
+Creates a narrated WAV file from any completed Markdown digest using either Kokoro
+or Chatterbox-Nano. The audio layer is optional and isolated: engine dependencies
+are installed separately and the existing fetch, digest, and publishing paths do
+not import them.
+
+Preview the speech-ready text without installing a model:
+
+```bash
+python3 -m text_to_speech digests/full-lab-digest-2026-07-28-7d.md --dry-run
+```
+
+Add `--style conversational` for a more natural spoken script with transitions;
+the default `direct` style stays close to the written summary.
+
+See [`text_to_speech/README.md`](text_to_speech/README.md) for Python 3.11 setup,
+provider installation, voice options, and generation commands.
+
 ## Claude Code Skills
 
 The summarization and analysis work is performed by Claude Code skills in `.claude/skills/`:
@@ -185,6 +206,7 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 | `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
 | `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
 | `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
+| `digest-audio` | Generates an audio version of a completed digest with Kokoro or Chatterbox-Nano |
 
 Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all five.
 
@@ -211,9 +233,31 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 
 > **Thermal stress in Pacific oysters (*C. gigas*) at 35–36°C** — Two independent notebooks document active heat stress experiments on *C. gigas* this week using overlapping temperature ranges: Ariana's notebook (thermal hardening at Point Whitney) and the Genefish WordPress (Hazel's GlycogenGlo assays, Jesse's mortality assessments, and a 36°C incubator entry).
 
+## Tests
+
+Stdlib `unittest`, no dependencies and no network access — every HTTP call is mocked.
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+To run a single module:
+
+```bash
+python3 -m unittest tests.test_publish_digest
+```
+
+The suite covers the parsing and safety logic in all three scripts: HTML stripping,
+date parsing and paging in `fetch_lab_posts.py`; the sanitizer allowlist, token
+handling, and token redaction in `publish_digest.py`; and the cosmetic/substantive
+boundary, compare-range construction, and post clipping in `fetch_github_notebook.py`.
+The optional audio layer is covered too, but its provider tests stub out Kokoro and
+Chatterbox rather than loading the real models.
+
 ## Requirements
 
 - Python 3.8+ — stdlib only for `fetch_lab_posts.py` and `fetch_github_notebook.py`
+- Python 3.10+ (3.11 recommended) — only for the optional Kokoro/Chatterbox-Nano audio layer
 - `python-markdown` (`pip install markdown`) or `pandoc` — only for `publish_digest.py`
 - `GITHUB_TOKEN` or `GH_TOKEN` in the environment — optional, but raises the GitHub API rate limit from 60 to 5,000 requests/hour. The `gh` CLI is **not** required.
 - Claude Code (for running skills)
