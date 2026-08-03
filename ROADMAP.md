@@ -146,6 +146,56 @@ Three things to settle before building it:
 Depends on item 4 (state) and pairs with item 6 (the scheduling mechanism is the
 same, just at daily cadence).
 
+### 12. Literature links as comments on genefish.wordpress.com posts
+
+A lighter-weight variant of item 9 that puts the connection where the work is instead
+of in a separate post: for each new post on genefish.wordpress.com, leave a comment
+linking the one or two most relevant recent papers. The comment sits under the post it
+is about, so a reader who lands on the notebook entry six months later sees the
+literature alongside it.
+
+Two of the three hard parts already exist. The WordPress.com v1.1 API creates comments
+at `POST /sites/$site/posts/$post_ID/replies/new` with a single `content` field and a
+Bearer token — the same credential `publish_digest.py` already reads from
+`~/.config/LabNotebook-Summarizer/wp_token`. `comments_open` is `true` on recent
+genefish posts, so nothing needs enabling site-side (re-check rather than assume; the
+setting is per-post). And [literature-connector/SKILL.md](.claude/skills/literature-connector/SKILL.md)
+already returns relationship-tagged papers with PMID/DOI links and already declines to
+stretch a loose match — the right default when the alternative is public text under
+someone else's notebook entry.
+
+What is missing:
+
+1. **`scripts/post_comment.py`** — a sibling to `publish_digest.py` reusing
+   `read_token`, `sanitize`, `markdown_to_html`, and the token-scrubbing in
+   `post_draft`. Takes `--post-id` and a *file path* for the body; comment text never
+   becomes a command-line argument, same injection reasoning as the publisher.
+2. **Post IDs in the fetch output.** `fetch_lab_posts.py` keeps `URL` but drops `ID`,
+   and the comment endpoint is ID-addressed. One field to add.
+3. **TOPIC and FINDING inferred from the post body** — the same gap item 9 describes.
+   Logistical posts (ordering, meeting notes, equipment) have no finding to connect;
+   skip them rather than inventing one.
+4. **State**, reusing item 4's mechanism so a post gets at most one literature comment
+   even when a later run's window still includes it.
+
+The structural difference from every existing publish path: **comments have no draft
+state.** `publish_digest.py` leans on `status: draft` as the human-review gate, and
+that gate does not exist here — a POST as the site owner is live and auto-approved
+immediately. A comment can be flipped to `unapproved` afterward via
+`/sites/$site/comments/$comment_ID`, but that is backwards: public first, reviewed
+second. So review moves *before* the POST — the run writes proposed comments to a file
+(target post title, post ID, comment body), a human reads it, and only then does
+anything get sent. That keeps this a two-step flow rather than an unattended one, which
+is the right trade for text appearing under a colleague's name on a public site.
+
+One advantage over item 9: no feedback loop to defend against. Comments are not
+returned by the posts endpoint, so a daily fetch never sees its own output and cannot
+start connecting its own connections.
+
+Shares items 1–4 of item 9's pipeline; the two should be built as one daily run with a
+choice of output surface rather than twice. Depends on item 4 (state) and wants item 5
+(cache) for the same reason item 9 does.
+
 ---
 
 ### 10. Surface figures and data links
