@@ -9,33 +9,6 @@ rather than being renumbered.
 
 ## Medium term — reliability
 
-### 2. Deduplicate the four GitHub agent definitions
-
-The shared fetch/parse work is already collapsed into `fetch_github_notebook.py`,
-driven by the per-notebook `NOTEBOOKS` config. What remains is the agent files
-themselves: `ariana`, `sams`, `grace`, and `tumbling-oysters` are still 83–94 line
-documents whose output-format, figure-handling, and no-activity instructions are
-near-identical, so a change to the summary format is still made four times. Reduce
-each to the notebook-specific guidance (permalink convention, project repos,
-front-matter quirks) and move the common formatting contract somewhere single —
-the `full-lab-digest` skill already specifies the shape it wants back.
-
-### 3. Make `weekly-lab-digest`'s Google Drive step optional
-
-[weekly-lab-digest/SKILL.md](.claude/skills/weekly-lab-digest/SKILL.md) Step 7 calls
-`mcp__claude_ai_Google_Drive__create_file` unconditionally. If that MCP server is not
-connected the skill fails after all the real work is done. Make the upload
-best-effort: write the file first, then attempt the upload and report if it was
-skipped.
-
-### 4. Track what has already been digested
-
-`digests/` contains overlapping runs (`full-lab-digest-2026-07-13.md` and
-`-07-14.md` cover mostly the same 7-day window). A small state file recording the
-last digest date and the post URLs already covered would let a run report only
-what is new, and would avoid re-running expensive literature searches on findings
-already written up.
-
 ### 5. Cache literature-connector results
 
 The `full-lab-digest` skill runs `literature-connector` sequentially for every
@@ -65,8 +38,8 @@ each file.
 
 Cross-notebook pattern detection currently looks only within a single window's five
 summaries. The more interesting narratives (an experiment set up in one week and
-resolved three weeks later) span weeks. Once item 4 gives durable per-post state,
-add a multi-week pass over prior digests.
+resolved three weeks later) span weeks. Item 4's durable per-post state is now in
+place, so the remaining work is the multi-week pass over prior digests.
 
 ### 9. Daily literature-connection post on genefish.wordpress.com
 
@@ -147,3 +120,31 @@ dependency, and no network access (every HTTP call is mocked). Run with
 - `fetch_github_notebook.py` — the 6-line cosmetic boundary, middle-clipping,
   compare-range construction, rate-limit messages, and an end-to-end pass over
   `main()` covering path matching and the per-class content caps.
+
+### 2. Deduplicate the four GitHub agent definitions
+
+The common formatting contract now lives in
+[.claude/shared/notebook-digest-format.md](.claude/shared/notebook-digest-format.md),
+which each agent reads first. `ariana`, `sams`, `grace`, and `tumbling-oysters` are
+down to 35–41 lines each and carry only notebook-specific guidance: the
+`fetch_github_notebook.py` config name, repo structure, front-matter fields,
+permalink convention, no-activity message, header, and block fields. A change to
+the summary format is now made once.
+
+### 3. Make `weekly-lab-digest`'s Google Drive step optional
+
+Resolved by dropping the Drive upload entirely rather than making it best-effort.
+[weekly-lab-digest/SKILL.md](.claude/skills/weekly-lab-digest/SKILL.md) Step 7 now
+just returns the `digests/[week_start].md` path, so the skill no longer depends on
+an MCP server being connected. If Drive delivery is wanted again, add it after the
+file write and treat a failure as a skipped step, not an error.
+
+### 4. Track what has already been digested
+
+`full-lab-digest` reads and writes `digests/.digest-state.json` (`last_digest_date`
+plus a `digested_urls` list spanning all five sources, committed to the repo so
+de-duplication survives across machines). Posts already covered are excluded from
+the per-source summaries before compiling, with a per-source note of how many were
+omitted; a missing state file is treated as a first run. Canonical post URLs only
+are matched, trailing slash insensitive — image, repo-root, and literature links are
+never tracked.
