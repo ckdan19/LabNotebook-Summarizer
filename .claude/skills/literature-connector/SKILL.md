@@ -15,6 +15,64 @@ The skill takes two inputs from the user's message:
 
 If the user omits the finding, ask for it before proceeding — the skill cannot categorize papers without it.
 
+## Caching (disk cache for API responses)
+
+To avoid re-hitting the PubMed and Europe PMC APIs for identical searches, this skill caches the **raw API response** of each live call on disk. Raw responses (not the filtered/categorized result) are cached because the relevance filter and categorization depend on FINDING, which can change between runs while the underlying query stays the same — so a cached raw response for a given TOPIC query can be re-analyzed against a new FINDING.
+
+**Cache location:** `.cache/literature-connector/` (relative to the repo root). Create the directory if it does not exist. This path is git-ignored — cached responses are never committed.
+
+**What gets cached:** each of the three live API calls independently — the PubMed `esearch` call (Step 2), the PubMed `efetch` call (Step 3), and the Europe PMC `search` call (Step 4).
+
+**Cache key:** the SHA-256 hash of a canonical string combining the call type, the exact query string sent, and the date window used:
+
+```
+<call-type>|<exact query string>|<date window>
+```
+
+where:
+- `<call-type>` is one of `pubmed-esearch`, `pubmed-efetch`, `europepmc-search`.
+- `<exact query string>` is the literal term/id sent to the API (the `term=` value for esearch, the comma-joined PMID list for efetch, the `query=` value for Europe PMC), before URL-encoding.
+- `<date window>` is `reldate=365;today=YYYY-MM-DD` for the PubMed calls, or `START_DATE..END_DATE` for Europe PMC.
+
+The cache filename is `<sha256-hex>.json`.
+
+**Cache entry format** (JSON):
+
+```json
+{
+  "call_type": "pubmed-esearch | pubmed-efetch | europepmc-search",
+  "query": "<exact query string>",
+  "date_window": "<date window string>",
+  "request_url": "<full request URL, for debugging>",
+  "fetched_at": "<ISO 8601 UTC timestamp of the original successful live fetch>",
+  "response": "<raw response body, verbatim>"
+}
+```
+
+**Read/write procedure — apply to every one of the three API calls:**
+
+1. **Before** making the live call, compute the cache key and check for `.cache/literature-connector/<key>.json`.
+2. **Cache hit (fresh):** if the file exists and `now - fetched_at < 48 hours`, use its `response` field in place of the live call. Do **not** make the live request. Record that this call was served from cache and remember its `fetched_at` timestamp for the output header.
+3. **Cache miss or stale:** if the file is absent, or `fetched_at` is 48 hours old or older, make the live call as normal.
+   - **On a successful (HTTP 200) fetch:** write/overwrite the cache entry with a fresh `fetched_at` timestamp and the raw response body, then proceed using the live response.
+   - **On a failed fetch (non-200, timeout, etc.):** follow the existing failed-fetch handling in Steps 3/5 and Step 10 exactly — report the record as "unable to retrieve" and exclude it. **Do not** write a cache entry, and **do not** fall back to a stale cached entry to fill the gap. A stale cache entry is never a substitute for a failed live fetch — caching must never be used as a workaround for a failed fetch, and must never let stale content masquerade as a live result.
+
+**Suggested Bash helpers** (run via the shell; adjust as needed):
+
+```bash
+mkdir -p .cache/literature-connector
+# compute key:
+KEY=$(printf '%s' "pubmed-esearch|${QUERY}|reldate=365;today=$(date -u +%F)" | sha256sum | cut -d' ' -f1)
+CACHE_FILE=".cache/literature-connector/${KEY}.json"
+# freshness check (48h = 172800s), reading fetched_at from the JSON:
+if [ -f "$CACHE_FILE" ]; then
+  FETCHED=$(python3 -c "import json,sys;print(json.load(open('$CACHE_FILE'))['fetched_at'])")
+  # compare epoch of $FETCHED to now; use cache if (now - fetched) < 172800s
+fi
+# on a fresh live 200, write:
+#   fetched_at = $(date -u +%Y-%m-%dT%H:%M:%SZ)
+```
+
 ## Steps
 
 Run Steps 1–3 (PubMed) and Steps 4–5 (bioRxiv) in parallel, then merge at Step 6.
@@ -34,6 +92,8 @@ Transform the TOPIC into a PubMed query string. Apply the following rules:
 
 ### 2. Run esearch
 
+**Check the cache first** (see the Caching section): compute the `pubmed-esearch` key from the exact `term` value and the date window, and if a fresh (< 48h) entry exists, use its stored response instead of calling the API. Otherwise fetch live and, on HTTP 200, write a fresh cache entry.
+
 Fetch PMIDs via:
 
 ```
@@ -49,6 +109,8 @@ Parse `esearchresult.idlist` from the JSON response. If the list is empty:
 Cap processing at the first 10 PMIDs even if more are returned.
 
 ### 3. Fetch titles and abstracts via efetch
+
+**Check the cache first** (see the Caching section): compute the `pubmed-efetch` key from the comma-joined PMID list and the date window, and if a fresh (< 48h) entry exists, use its stored response instead of calling the API. Otherwise fetch live and, on HTTP 200, write a fresh cache entry. If the live efetch fails, apply the failure handling below — do **not** fall back to a stale cache entry.
 
 For the list of PMIDs, fetch full records in abstract text format:
 
@@ -78,6 +140,8 @@ If an individual record in the response is missing its `AB` field, treat it the 
 ### 4. Build the Europe PMC preprint query
 
 Use the same core keywords as the PubMed query. Compute the 12-month start date as today's date minus 365 days, formatted as `YYYY-MM-DD`.
+
+**Check the cache first** (see the Caching section): compute the `europepmc-search` key from the exact `query` value (keywords + `SRC:PPR` + date filter) and the `START_DATE..END_DATE` date window, and if a fresh (< 48h) entry exists, use its stored response instead of calling the API. Otherwise fetch live and, on HTTP 200, write a fresh cache entry. If the live fetch fails, apply the existing failure handling — do **not** fall back to a stale cache entry.
 
 Construct the URL:
 
@@ -166,6 +230,7 @@ Format the final output as:
 **Date range:** last 12 months (from [today minus 365 days] to [today])
 **PubMed papers retrieved:** [N] · **relevant:** [M]
 **bioRxiv preprints retrieved:** [N] · **relevant:** [M]
+**Data freshness:** [For each of the three API calls, state "live" or "from cache". For any served from cache, give the original fetch timestamp, e.g. "PubMed esearch/efetch: from cache (fetched 2026-08-02T14:31:09Z); Europe PMC: live". If all live, write "all live (no cache used)".]
 **Excluded (retrieval failed):** [N total — list each as: PMID/DOI · reason (e.g. HTTP 403, abstract field absent, timeout); or "none" if all fetches succeeded]
 
 ---
@@ -200,3 +265,4 @@ Additional rules:
 - Do not speculate about paper content beyond what is stated in the retrieved abstract.
 - Never fabricate a PMID, DOI, or paper title.
 - **Failed fetches — hard rule:** If any HTTP request returns a non-200 response (including 403 Forbidden, 401 Unauthorized, 500, etc.), that record must be reported as "unable to retrieve" and excluded from all results. Do not generate any summary, characterization, relationship tag, or inference from a failed fetch under any circumstances — not from the title, not from the DOI, not from contextual knowledge about the authors or topic, not from assumptions about what such a paper would likely say. A paper only appears in the results section if its abstract was successfully retrieved and is being directly cited.
+- **Caching is not a fetch fallback:** the disk cache (see Caching section) may only supply a response when the matching entry is **fresh (< 48 hours old)**. A stale or missing cache entry combined with a failed live fetch is still a failed fetch — report it as "unable to retrieve" and exclude it. Never reach for stale cached content, and never fabricate content, to paper over a failed live fetch.

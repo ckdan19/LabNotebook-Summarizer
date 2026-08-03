@@ -18,3 +18,5 @@ The `literature-connector` skill lives at `.claude/skills/literature-connector/S
 **Why:** User wants a tool to connect specific lab qPCR findings to recent literature without hallucinated or loosely-matched papers.
 
 **How to apply:** Invoke via `/literature-connector` skill. Always run supplemental gene-specific searches in parallel with the primary query.
+
+**Disk caching (added 2026-08-03):** Raw API responses for all three live calls (PubMed esearch, PubMed efetch, Europe PMC search) are cached under `.cache/literature-connector/<sha256>.json`, keyed by `<call-type>|<exact query string>|<date window>`. Raw responses (not the filtered/categorized result) are cached so the same TOPIC query can be re-analyzed against a different FINDING. Before each live call, a fresh (< 48h) cache entry is reused and the output's "Data freshness" header notes cache use + original `fetched_at` timestamp; stale/missing → fetch live and rewrite entry. Hard rule preserved: a stale/missing cache entry + failed live fetch is still a failed fetch (report "unable to retrieve"); caching is never a fetch fallback. `.cache/` is git-ignored.
