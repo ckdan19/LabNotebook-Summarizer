@@ -70,6 +70,7 @@ This one needs two things from you: the **topic** to search, and the **specific 
 
 - A full digest launches five subagents at once and takes a few minutes. Claude will show them running in parallel — that's normal.
 - Digests are written to `digests/` as Markdown. Ask Claude to show you the file if you'd rather read it in the chat.
+- **A post is only ever written up once.** The full digest records every post URL it covers in `digests/.digest-state.json`, so a post that still falls inside the requested window but appeared in an earlier digest is skipped rather than repeated. That file is committed to the repo so the de-duplication holds across machines and collaborators. If you *want* a post covered again, ask Claude to remove its URL from the state file.
 - A source with no posts that week is reported as "no activity" rather than silently dropped.
 - Small edits to a post — a fixed typo or link, six diff lines or fewer — are flagged as cosmetic and are not written up as new science.
 - If a notebook fetch fails (rate limit, network), Claude will tell you which source failed instead of quietly returning a partial digest.
@@ -79,8 +80,11 @@ This one needs two things from you: the **topic** to search, and the **specific 
 ```
 LabNotebook-Summarizer/
 ├── .claude/
-│   ├── skills/              # full-lab-digest, weekly-lab-digest, literature-connector, wordpress-publisher
-│   └── agents/              # One subagent per notebook source (five total)
+│   ├── skills/              # full-lab-digest, weekly-lab-digest, literature-connector,
+│   │                        #   wordpress-publisher, digest-audio
+│   ├── agents/              # One subagent per notebook source (five total)
+│   └── shared/
+│       └── notebook-digest-format.md  # Output contract shared by the four GitHub agents
 ├── scripts/
 │   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
@@ -88,6 +92,7 @@ LabNotebook-Summarizer/
 ├── text_to_speech/          # Optional, isolated Kokoro / Chatterbox-Nano digest narration
 ├── tests/                   # Stdlib unittest suite for the scripts and the audio layer
 ├── digests/                 # Generated digest files (Markdown)
+│   └── .digest-state.json   # URLs already covered, so no post is digested twice
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
 │   └── skill-literature-connector.md
@@ -125,6 +130,8 @@ Three design points keep this fast and correct:
 - **Two API calls locate everything.** A commit listing plus a single `compare` over the whole range replaces one API call per commit.
 - **Post bodies are read at the commit SHA**, not off a branch name. `sams-notebook` and `grace-ac.github.io` default to `master` while the other two use `main`; reading at the SHA sidesteps that difference entirely.
 - **Long posts are clipped from the middle**, never the end, so front matter and conclusions both survive. A `content_truncated` flag and a warning mark any post this affected.
+
+Options: `--notebook` (required: `ariana`, `grace`, `sams`, `tumbling-oysters`), `--days` (7), `--cosmetic-lines` (6 — the changed-line threshold below which a modified post counts as cosmetic), `--max-chars` (60000 — per-post content cap), `--cosmetic-max-chars` (4000 — tighter cap for cosmetic edits), `--file-dates` (fetch per-file commit dates, one extra API call per post), `--timeout` (20).
 
 Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API rate limit from 60 to 5,000 requests per hour. Without it a full five-source digest run consumes roughly 10 of the 60 available calls. An exhausted limit produces a single actionable error rather than a partial digest.
 

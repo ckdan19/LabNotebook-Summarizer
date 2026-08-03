@@ -9,33 +9,6 @@ rather than being renumbered.
 
 ## Medium term — reliability
 
-### 2. Deduplicate the four GitHub agent definitions
-
-The shared fetch/parse work is already collapsed into `fetch_github_notebook.py`,
-driven by the per-notebook `NOTEBOOKS` config. What remains is the agent files
-themselves: `ariana`, `sams`, `grace`, and `tumbling-oysters` are still 83–94 line
-documents whose output-format, figure-handling, and no-activity instructions are
-near-identical, so a change to the summary format is still made four times. Reduce
-each to the notebook-specific guidance (permalink convention, project repos,
-front-matter quirks) and move the common formatting contract somewhere single —
-the `full-lab-digest` skill already specifies the shape it wants back.
-
-### 3. Make `weekly-lab-digest`'s Google Drive step optional
-
-[weekly-lab-digest/SKILL.md](.claude/skills/weekly-lab-digest/SKILL.md) Step 7 calls
-`mcp__claude_ai_Google_Drive__create_file` unconditionally. If that MCP server is not
-connected the skill fails after all the real work is done. Make the upload
-best-effort: write the file first, then attempt the upload and report if it was
-skipped.
-
-### 4. Track what has already been digested
-
-`digests/` contains overlapping runs (`full-lab-digest-2026-07-13.md` and
-`-07-14.md` cover mostly the same 7-day window). A small state file recording the
-last digest date and the post URLs already covered would let a run report only
-what is new, and would avoid re-running expensive literature searches on findings
-already written up.
-
 ### 5. Cache literature-connector results
 
 The `full-lab-digest` skill runs `literature-connector` sequentially for every
@@ -46,6 +19,57 @@ date window, with a short TTL.
 ---
 
 ## Longer term — features
+
+### 11. Searchable archive of all notebook history
+
+Every path through the repo today is window-scoped: `fetch_github_notebook.py` builds
+its file list from `commits?since=...`, `fetch_lab_posts.py` takes `--days`, and
+`digests/.digest-state.json` remembers post URLs only in order to *exclude* them. So
+the tool answers "what happened last week" but cannot answer the question a lab
+actually asks constantly — "has anyone here done this before, and what did they find?"
+Sam's 2026-07-30 Glycogen-Glo post is a live example: four samples read above the
+standard curve and need re-assay at 2×–6× further dilution, and someone in the lab has
+plausibly already solved that. Finding out means manually grepping four GitHub repos
+and a WordPress site.
+
+The feature: an incrementally-built local corpus of every post from all five sources —
+one row per post with source, author, date, URL, categories, and full text — plus a
+`lab-archive` skill that queries it.
+
+1. **`scripts/build_archive.py`** — enumerate each repo's posts directory via the git
+   tree API (one call per repo, rather than the per-commit walk the windowed fetch
+   needs), fetch bodies, and store in SQLite with an FTS5 index. Stdlib only, matching
+   the existing no-new-runtime-dependency stance. Incremental: skip any path whose blob
+   SHA is unchanged since the last build, so re-runs are nearly free. WordPress posts
+   come from the same REST endpoint `fetch_lab_posts.py` already pages through, with the
+   window removed.
+2. **Share the parsing.** Front-matter, permalink derivation, and post-body handling
+   already exist in `build_post` in `fetch_github_notebook.py`; factor that so the
+   archive builder and the windowed fetch use one implementation rather than drifting.
+3. **`.claude/skills/lab-archive/SKILL.md`** — takes a plain-English question, runs FTS
+   queries, and returns hits grouped by researcher with dates and permalinks. Answers
+   cite posts; never paraphrase a result without linking it.
+4. **Feed it back into the digest.** A "Prior work in this lab" line per notable
+   finding, resolved against the archive.
+
+Keyword FTS is the right first cut: lab vocabulary is unusually precise
+(`Glycogen-Glo`, `topGO`, `resazurin`) and exact-term matching beats embeddings on
+jargon with no model dependency. If recall proves too tight, embeddings can layer onto
+the same table later.
+
+Two things to settle before building it:
+
+- **Backfill cost.** The first build fetches every post body across five sources, which
+  is far more GitHub API calls than a weekly run. Needs `GITHUB_TOKEN` and probably a
+  resumable build (record completed paths, continue after a rate-limit stop) so a
+  failure halfway through does not restart from zero.
+- **Where the DB lives.** It is a derived artifact, so it should be `.gitignore`d and
+  rebuildable from scratch — but that means each clone pays the backfill once. Decide
+  that explicitly rather than committing a binary by accident.
+
+Strengthens item 8 (cross-notebook analysis over weeks gets a full-history substrate
+instead of a walk over prior digest files) and item 5 (a prior-work check on the
+archive is free, where a literature search is not).
 
 ### 6. Schedule the weekly run
 
@@ -65,8 +89,10 @@ each file.
 
 Cross-notebook pattern detection currently looks only within a single window's five
 summaries. The more interesting narratives (an experiment set up in one week and
-resolved three weeks later) span weeks. Once item 4 gives durable per-post state,
-add a multi-week pass over prior digests.
+resolved three weeks later) span weeks. Item 4's durable per-post state is now in
+place, so the remaining work is the multi-week pass over prior digests — and if item
+11 lands first, run the pass over the post archive itself rather than over the digests
+written about it.
 
 ### 9. Daily literature-connection post on genefish.wordpress.com
 
@@ -120,6 +146,56 @@ Three things to settle before building it:
 Depends on item 4 (state) and pairs with item 6 (the scheduling mechanism is the
 same, just at daily cadence).
 
+### 12. Literature links as comments on genefish.wordpress.com posts
+
+A lighter-weight variant of item 9 that puts the connection where the work is instead
+of in a separate post: for each new post on genefish.wordpress.com, leave a comment
+linking the one or two most relevant recent papers. The comment sits under the post it
+is about, so a reader who lands on the notebook entry six months later sees the
+literature alongside it.
+
+Two of the three hard parts already exist. The WordPress.com v1.1 API creates comments
+at `POST /sites/$site/posts/$post_ID/replies/new` with a single `content` field and a
+Bearer token — the same credential `publish_digest.py` already reads from
+`~/.config/LabNotebook-Summarizer/wp_token`. `comments_open` is `true` on recent
+genefish posts, so nothing needs enabling site-side (re-check rather than assume; the
+setting is per-post). And [literature-connector/SKILL.md](.claude/skills/literature-connector/SKILL.md)
+already returns relationship-tagged papers with PMID/DOI links and already declines to
+stretch a loose match — the right default when the alternative is public text under
+someone else's notebook entry.
+
+What is missing:
+
+1. **`scripts/post_comment.py`** — a sibling to `publish_digest.py` reusing
+   `read_token`, `sanitize`, `markdown_to_html`, and the token-scrubbing in
+   `post_draft`. Takes `--post-id` and a *file path* for the body; comment text never
+   becomes a command-line argument, same injection reasoning as the publisher.
+2. **Post IDs in the fetch output.** `fetch_lab_posts.py` keeps `URL` but drops `ID`,
+   and the comment endpoint is ID-addressed. One field to add.
+3. **TOPIC and FINDING inferred from the post body** — the same gap item 9 describes.
+   Logistical posts (ordering, meeting notes, equipment) have no finding to connect;
+   skip them rather than inventing one.
+4. **State**, reusing item 4's mechanism so a post gets at most one literature comment
+   even when a later run's window still includes it.
+
+The structural difference from every existing publish path: **comments have no draft
+state.** `publish_digest.py` leans on `status: draft` as the human-review gate, and
+that gate does not exist here — a POST as the site owner is live and auto-approved
+immediately. A comment can be flipped to `unapproved` afterward via
+`/sites/$site/comments/$comment_ID`, but that is backwards: public first, reviewed
+second. So review moves *before* the POST — the run writes proposed comments to a file
+(target post title, post ID, comment body), a human reads it, and only then does
+anything get sent. That keeps this a two-step flow rather than an unattended one, which
+is the right trade for text appearing under a colleague's name on a public site.
+
+One advantage over item 9: no feedback loop to defend against. Comments are not
+returned by the posts endpoint, so a daily fetch never sees its own output and cannot
+start connecting its own connections.
+
+Shares items 1–4 of item 9's pipeline; the two should be built as one daily run with a
+choice of output surface rather than twice. Depends on item 4 (state) and wants item 5
+(cache) for the same reason item 9 does.
+
 ---
 
 ### 10. Surface figures and data links
@@ -147,3 +223,31 @@ dependency, and no network access (every HTTP call is mocked). Run with
 - `fetch_github_notebook.py` — the 6-line cosmetic boundary, middle-clipping,
   compare-range construction, rate-limit messages, and an end-to-end pass over
   `main()` covering path matching and the per-class content caps.
+
+### 2. Deduplicate the four GitHub agent definitions
+
+The common formatting contract now lives in
+[.claude/shared/notebook-digest-format.md](.claude/shared/notebook-digest-format.md),
+which each agent reads first. `ariana`, `sams`, `grace`, and `tumbling-oysters` are
+down to 35–41 lines each and carry only notebook-specific guidance: the
+`fetch_github_notebook.py` config name, repo structure, front-matter fields,
+permalink convention, no-activity message, header, and block fields. A change to
+the summary format is now made once.
+
+### 3. Make `weekly-lab-digest`'s Google Drive step optional
+
+Resolved by dropping the Drive upload entirely rather than making it best-effort.
+[weekly-lab-digest/SKILL.md](.claude/skills/weekly-lab-digest/SKILL.md) Step 7 now
+just returns the `digests/[week_start].md` path, so the skill no longer depends on
+an MCP server being connected. If Drive delivery is wanted again, add it after the
+file write and treat a failure as a skipped step, not an error.
+
+### 4. Track what has already been digested
+
+`full-lab-digest` reads and writes `digests/.digest-state.json` (`last_digest_date`
+plus a `digested_urls` list spanning all five sources, committed to the repo so
+de-duplication survives across machines). Posts already covered are excluded from
+the per-source summaries before compiling, with a per-source note of how many were
+omitted; a missing state file is treated as a first run. Canonical post URLs only
+are matched, trailing slash insensitive — image, repo-root, and literature links are
+never tracked.
