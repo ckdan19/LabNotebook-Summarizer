@@ -1,0 +1,49 @@
+All the fetch commands — both from the subagents and from my own direct attempts — are being blocked with "This command requires approval," and the approvals aren't going through. I can't produce the digest without running the fetch scripts, since they're the only sanctioned way to pull post data.
+
+Here's where things stand:
+
+- **All five subagents** (tumbling-oysters, Ariana, Sam's, Grace, WordPress) launched and ran, but each was denied permission to run its fetch script (`fetch_lab_posts.py` / `fetch_github_notebook.py`).
+- **My own direct attempts** to run those same scripts also came back as "This command requires approval" without succeeding.
+
+I need you to approve running these commands (they're all read-only network fetches):
+
+```
+python3 scripts/fetch_lab_posts.py --days 7                          # WordPress
+python3 scripts/fetch_github_notebook.py --notebook tumbling-oysters --days 7
+python3 scripts/fetch_github_notebook.py --notebook ariana --days 7
+python3 scripts/fetch_github_notebook.py --notebook sams --days 7
+python3 scripts/fetch_github_notebook.py --notebook grace --days 7
+```
+
+The later steps (WordPress draft publish, `git commit`, `git push`) will also need approval when we get there.
+
+**How would you like to proceed?**
+1. Approve the fetch commands (and I'll re-run them, then continue through the full digest → publish → commit/push flow), or
+2. If your permission mode is set to reject by default, switch it to prompt/accept for Bash (or whitelist `python3 scripts/*`) and tell me to retry.
+
+Once the fetches go through, I'll handle exclusion against the 65 already-covered URLs, compile the digest, run the literature connections, write the file, update the state, publish the draft, and commit/push.
+I've hit repeated permission denials on the network calls (`curl`, `WebFetch`) and on writing scratch scripts — so the live PubMed/bioRxiv **Literature Connections** step (step 8 of the full-lab-digest skill) can't run right now. I don't want to fabricate that section, so I need a decision from you before finishing.
+
+Here's where everything else stands — all five sources fetched and deduplicated against `digests/.digest-state.json`:
+
+**Activity this window (2026-07-25 → 2026-07-31), after dedup:**
+
+- **Genefish WordPress** — 6 new posts (Tank room `07-27` was already covered, excluded):
+  - Lab Notebook tweaks + Roadmap (Cas Daniel, 07-28)
+  - OAE oyster experiment scaled up — mass mortality again (acasey2, 07-29)
+  - Rough outline of a collagen gene-expression comparison program (Samuel Slutz, 07-29)
+  - "Literature Connections" for acasey2 (genefish, 07-30, automated)
+  - A bit of drama — OAE mortality walk-back (acasey2, 07-30)
+  - This Week in Lab Notebooks (genefish, 07-30, no retrievable content)
+- **Grace Crandall** — 1 new post (qPCR Plate 1&2 was already covered, excluded):
+  - Preliminary GO enrichment (topGO) on Day 12 DEGs across 3 pycno species; translation (GO:0006412) strongly enriched (07-30)
+- **Tumbling Oysters, Ariana, Sam's Notebook** — no posts.
+
+So **2 of 5 sources had activity, 3 had none.** Cross-notebook: one genuine shared theme (GO/Gene-Ontology-driven differential expression analysis — Grace's topGO enrichment and Slutz's GO-tag collagen program).
+
+**How do you want to handle the literature section?**
+
+1. **Grant network access** (approve `WebFetch` or a `python3` search script) and I'll run the literature step as the skill specifies, then publish.
+2. **Skip it** — I'll publish the draft with the five source summaries + cross-notebook analysis, and mark the Literature Connections section as omitted (network unavailable) rather than claiming "no literature found."
+
+Which would you like? (Writing the digest file and running `publish_digest.py` to create the WordPress **draft** will also touch the network/filesystem — approving those when prompted will let me finish.)
