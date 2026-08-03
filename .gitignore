@@ -437,3 +437,5 @@ FodyWeavers.xsd
 # Generated digest narration (keep the directory via .gitkeep)
 text_to_speech/output/*
 !text_to_speech/output/.gitkeep
+cron-log.txt
+test-log.txt
