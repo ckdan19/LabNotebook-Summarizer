@@ -7,17 +7,6 @@ rather than being renumbered.
 
 ---
 
-## Medium term — reliability
-
-### 5. Cache literature-connector results
-
-The `full-lab-digest` skill runs `literature-connector` sequentially for every
-notable finding — the slowest part of a digest, and largely repeated week to week
-for ongoing projects. Cache PubMed/Europe PMC responses on disk keyed by query +
-date window, with a short TTL.
-
----
-
 ## Longer term — features
 
 ### 11. Searchable archive of all notebook history
@@ -77,13 +66,6 @@ The digest is generated manually. Automate it as a scheduled Claude Code task (o
 GitHub Action) that runs `full-lab-digest` weekly, commits the result to `digests/`,
 and opens the WordPress draft. Keep publishing as `draft` — the human review step is
 the point.
-
-### 7. Add a digest index
-
-`digests/` is a flat directory of dated Markdown files with three different naming
-conventions. Generate a `digests/README.md` index with date, type, sources covered,
-and the cross-notebook themes found — so past digests are browsable without opening
-each file.
 
 ### 8. Extend cross-notebook analysis across weeks
 
@@ -241,6 +223,21 @@ Resolved by dropping the Drive upload entirely rather than making it best-effort
 just returns the `digests/[week_start].md` path, so the skill no longer depends on
 an MCP server being connected. If Drive delivery is wanted again, add it after the
 file write and treat a failure as a skipped step, not an error.
+
+### 5. Cache literature-connector results
+
+`literature-connector` now caches PubMed/Europe PMC responses on disk keyed by
+query + date window, with a 48-hour TTL, so `full-lab-digest`'s repeated per-finding
+searches for ongoing projects hit the cache instead of the network. The cache
+directory is `.gitignore`d as a rebuildable derived artifact. See
+[literature-connector/SKILL.md](.claude/skills/literature-connector/SKILL.md).
+
+### 7. Add a digest index
+
+The `digest-index` skill generates `digests/README.md` — a browsable index of the
+flat `digests/` directory with date, type, sources covered, and cross-notebook
+themes per digest, so past digests are scannable without opening each file. See
+[digest-index/SKILL.md](.claude/skills/digest-index/SKILL.md).
 
 ### 4. Track what has already been digested
 
