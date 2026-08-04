@@ -18,6 +18,11 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+# Shared post-parsing logic, also used by the archive builder. Re-exported here
+# so callers and tests can keep referencing fetch_github_notebook.build_post /
+# .clip.
+from notebook_parsing import build_post, clip
+
 DEFAULT_DAYS = 7
 DEFAULT_TIMEOUT = 20
 DEFAULT_WORKERS = 4
@@ -136,45 +141,6 @@ def file_commit_dates(repo: str, path: str, since: str, timeout: int) -> list:
     """Commit dates that touched one path in the window, oldest last."""
     url = f"{API}/repos/{repo}/commits?since={quote(since)}&per_page=100&path={quote(path)}"
     return [c["commit"]["committer"]["date"] for c in get_json(url, timeout)]
-
-
-def clip(text: str, limit: int) -> tuple:
-    """Trim `text` to `limit` chars, keeping both ends.
-
-    Front matter sits at the top of a post and conclusions at the bottom, so a
-    plain head-only truncation would drop exactly the part worth summarizing.
-    Returns (text, dropped_chars) with dropped_chars 0 when nothing was cut.
-    """
-    if len(text) <= limit:
-        return text, 0
-    head = int(limit * 0.7)
-    tail = limit - head
-    dropped = len(text) - limit
-    marker = f"\n\n[... {dropped} characters omitted from the middle of this post ...]\n\n"
-    return text[:head] + marker + text[-tail:], dropped
-
-
-def build_post(repo: str, entry: dict, sha: str, cosmetic_lines: int) -> dict:
-    additions = entry.get("additions", 0)
-    deletions = entry.get("deletions", 0)
-    status = entry.get("status", "modified")
-    cosmetic = status == "modified" and (additions + deletions) <= cosmetic_lines
-
-    post = {
-        "path": entry["filename"],
-        "status": status,
-        "additions": additions,
-        "deletions": deletions,
-        "blob_url": f"https://github.com/{repo}/blob/{sha}/{entry['filename']}",
-        "change_class": "cosmetic" if cosmetic else "substantive",
-    }
-    if entry.get("previous_filename"):
-        post["previous_filename"] = entry["previous_filename"]
-    if cosmetic:
-        # The diff shows what the edit did; the body is still needed for the
-        # post's title and categories, but only a trimmed slice of it.
-        post["patch"] = entry.get("patch", "")
-    return post
 
 
 def main():
