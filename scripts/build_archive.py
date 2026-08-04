@@ -80,13 +80,22 @@ def init_db(conn: sqlite3.Connection) -> None:
             source     TEXT NOT NULL,
             author     TEXT,
             date       TEXT,
-            url        TEXT NOT NULL,
+            url        TEXT NOT NULL,   -- published (display) URL; NOT unique per file
+            path        TEXT NOT NULL,  -- repo file path (GitHub) or url (WordPress)
             title      TEXT,
             categories TEXT,          -- JSON array of category strings
             body_text  TEXT,
             blob_sha   TEXT,          -- git blob SHA (GitHub sources); NULL for WordPress
             fetched_at TEXT,
-            UNIQUE(source, url)
+            -- 1 when this post's published URL is shared by another archived post of
+            -- the same source, so the URL cannot uniquely resolve to it on the live
+            -- site (e.g. Grace's Jekyll `permalink: /:title/` collapses same-slug
+            -- posts from different years onto one URL). A future search can surface
+            -- this instead of presenting a possibly-stale link silently.
+            shadowed   INTEGER NOT NULL DEFAULT 0,
+            -- Identity is the repo file path, not the published URL: distinct source
+            -- files that derive the same URL must each keep their own row.
+            UNIQUE(source, path)
         );
 
         -- Full-text index over the searchable fields. External-content mode keeps
@@ -118,18 +127,22 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def existing_blob_sha(conn: sqlite3.Connection, source: str, url: str):
-    """Return the stored blob SHA for a post, or None if it is not archived yet."""
+def existing_blob_sha(conn: sqlite3.Connection, source: str, path: str):
+    """Return the stored blob SHA for a post, or None if it is not archived yet.
+
+    Keyed on the repo file `path` (the archive's identity), not the published URL —
+    two files whose URLs collide are still distinct posts with distinct SHAs.
+    """
     row = conn.execute(
-        "SELECT blob_sha FROM posts WHERE source = ? AND url = ?", (source, url)
+        "SELECT blob_sha FROM posts WHERE source = ? AND path = ?", (source, path)
     ).fetchone()
     return row[0] if row else None
 
 
-def url_exists(conn: sqlite3.Connection, source: str, url: str) -> bool:
+def path_exists(conn: sqlite3.Connection, source: str, path: str) -> bool:
     return (
         conn.execute(
-            "SELECT 1 FROM posts WHERE source = ? AND url = ?", (source, url)
+            "SELECT 1 FROM posts WHERE source = ? AND path = ?", (source, path)
         ).fetchone()
         is not None
     )
@@ -143,13 +156,14 @@ def upsert_post(conn: sqlite3.Connection, post: dict) -> None:
     """
     conn.execute(
         """
-        INSERT INTO posts (source, author, date, url, title, categories,
+        INSERT INTO posts (source, author, date, url, path, title, categories,
                            body_text, blob_sha, fetched_at)
-        VALUES (:source, :author, :date, :url, :title, :categories,
+        VALUES (:source, :author, :date, :url, :path, :title, :categories,
                 :body_text, :blob_sha, :fetched_at)
-        ON CONFLICT(source, url) DO UPDATE SET
+        ON CONFLICT(source, path) DO UPDATE SET
             author     = excluded.author,
             date       = excluded.date,
+            url        = excluded.url,
             title      = excluded.title,
             categories = excluded.categories,
             body_text  = excluded.body_text,
@@ -249,7 +263,7 @@ def process_github_source(conn: sqlite3.Connection, source: str, counts: dict) -
         blob_sha = entry["sha"]
         url = derive_permalink(source, path)
 
-        if existing_blob_sha(conn, source, url) == blob_sha:
+        if existing_blob_sha(conn, source, path) == blob_sha:
             counts[source]["skipped"] += 1
             continue
 
@@ -263,6 +277,7 @@ def process_github_source(conn: sqlite3.Connection, source: str, counts: dict) -
                 "author": fm["author"] or default_author,
                 "date": fm["date"] or _fallback_date(path),
                 "url": url,
+                "path": path,
                 "title": fm["title"] or _fallback_title(path),
                 "categories": json.dumps(fm["categories"]),
                 "body_text": body,
@@ -296,7 +311,8 @@ def process_wordpress_source(conn: sqlite3.Connection, counts: dict) -> list:
 
     for post in posts:
         url = post["url"]
-        if not url or url_exists(conn, source, url):
+        # WordPress has no repo path, so the URL itself is the file identity.
+        if not url or path_exists(conn, source, url):
             counts[source]["skipped"] += 1
             continue
         upsert_post(
@@ -306,6 +322,7 @@ def process_wordpress_source(conn: sqlite3.Connection, counts: dict) -> list:
                 "author": post["author"],
                 "date": post["date"],
                 "url": url,
+                "path": url,
                 "title": post["title"],
                 "categories": json.dumps([]),
                 "body_text": post["content"],
@@ -322,9 +339,39 @@ def process_wordpress_source(conn: sqlite3.Connection, counts: dict) -> list:
 # Summary / main
 # ---------------------------------------------------------------------------
 
+def mark_shadowed(conn: sqlite3.Connection, sources: list) -> None:
+    """Recompute the `shadowed` flag for the given sources.
+
+    A post is shadowed when its published URL is shared by another archived post of
+    the same source: the URL cannot uniquely resolve to it on the live site. We only
+    touch rows whose flag actually changes, to avoid needless FTS-trigger churn.
+    """
+    for source in sources:
+        colliding = (
+            "SELECT url FROM posts WHERE source = ? "
+            "GROUP BY url HAVING COUNT(*) > 1"
+        )
+        conn.execute(
+            f"UPDATE posts SET shadowed = 1 "
+            f"WHERE source = ? AND shadowed = 0 AND url IN ({colliding})",
+            (source, source),
+        )
+        conn.execute(
+            f"UPDATE posts SET shadowed = 0 "
+            f"WHERE source = ? AND shadowed = 1 AND url NOT IN ({colliding})",
+            (source, source),
+        )
+    conn.commit()
+
+
 def print_summary(conn: sqlite3.Connection, counts: dict, sources: list) -> None:
     totals = dict(
         conn.execute("SELECT source, COUNT(*) FROM posts GROUP BY source").fetchall()
+    )
+    shadowed = dict(
+        conn.execute(
+            "SELECT source, COUNT(*) FROM posts WHERE shadowed = 1 GROUP BY source"
+        ).fetchall()
     )
     grand_total = sum(totals.values())
     added = sum(counts[s]["added"] for s in sources)
@@ -334,12 +381,15 @@ def print_summary(conn: sqlite3.Connection, counts: dict, sources: list) -> None
     print(f"Posts added/updated this run: {added}")
     print(f"Posts skipped (already current): {skipped}")
     print(f"Total posts in archive: {grand_total}")
-    print("\nBy source:")
+    print("\nBy source (added + skipped should equal total):")
     for source in sorted(set(sources) | set(totals)):
         c = counts.get(source, {"added": 0, "skipped": 0})
+        shadow = shadowed.get(source, 0)
+        # A post whose URL collides with a sibling on the live site.
+        note = f"  ({shadow} shadowed)" if shadow else ""
         print(
             f"  {source:<18} total={totals.get(source, 0):<5} "
-            f"added={c['added']:<5} skipped={c['skipped']}"
+            f"added={c['added']:<5} skipped={c['skipped']:<5}{note}"
         )
 
 
@@ -381,6 +431,10 @@ def main() -> None:
             "skipped via their blob SHA).",
             file=sys.stderr,
         )
+
+    # Recompute URL-collision flags for whatever we touched (safe after an
+    # interruption too — it only reflects rows already committed).
+    mark_shadowed(conn, args.sources)
 
     if warnings:
         print("\nWarnings:")
