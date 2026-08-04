@@ -59,6 +59,27 @@ _DATE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 _FRONT_MATTER_FIELDS = ("title", "author", "date", "categories")
 
 
+def _strip_comment(value: str) -> str:
+    """Drop a trailing YAML `# comment` from a front-matter value.
+
+    Several tumbling-oysters posts leave the post template's scaffold comment on
+    the categories line, e.g. `categories: ["A", "B"] #choose "A", "Computing"...`.
+    Without this, the comment's words get split on commas into bogus categories.
+
+    Follows YAML's rule: a `#` starts a comment only when it is at the start of
+    the value or preceded by whitespace, and is not inside single/double quotes.
+    """
+    in_single = in_double = False
+    for i, ch in enumerate(value):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double and (i == 0 or value[i - 1].isspace()):
+            return value[:i].rstrip()
+    return value
+
+
 def _strip_quotes(value: str) -> str:
     """Remove one layer of matching single or double quotes, if present."""
     value = value.strip()
@@ -115,7 +136,7 @@ def parse_front_matter(text: str, default_author: str = None) -> dict:
         key = key.strip().lower()
         if key not in _FRONT_MATTER_FIELDS:
             continue
-        value = value.strip()
+        value = _strip_comment(value.strip())
 
         if key == "categories":
             if value:

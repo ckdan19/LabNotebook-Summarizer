@@ -103,6 +103,28 @@ class TestParseFrontMatter(unittest.TestCase):
         fm = notebook_parsing.parse_front_matter(text)
         self.assertEqual(fm["categories"], [])
 
+    def test_inline_categories_with_trailing_template_comment(self):
+        # Newer tumbling-oysters posts leave the template's `#choose ...` scaffold
+        # comment on the categories line; only the values before `#` are real.
+        text = (
+            "---\n"
+            "title: Sea star wasting\n"
+            'categories: ["Transcriptomics", "Genomics"] #choose "Aquaculture", "Computing"\n'
+            "---\n"
+        )
+        fm = notebook_parsing.parse_front_matter(text)
+        self.assertEqual(fm["categories"], ["Transcriptomics", "Genomics"])
+
+    def test_scalar_value_trailing_comment_stripped(self):
+        text = "---\ntitle: Real title # placeholder\ndate: 2026-07-15\n---\n"
+        fm = notebook_parsing.parse_front_matter(text)
+        self.assertEqual(fm["title"], "Real title")
+
+    def test_hash_inside_quotes_preserved(self):
+        text = '---\ntitle: "Issue #42 writeup"\n---\n'
+        fm = notebook_parsing.parse_front_matter(text)
+        self.assertEqual(fm["title"], "Issue #42 writeup")
+
     def test_colon_in_quoted_title_preserved(self):
         text = '---\ntitle: "Analysis: part 1"\n---\n'
         fm = notebook_parsing.parse_front_matter(text)
