@@ -95,13 +95,13 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
 ## Cross-Notebook Patterns & Connections
 
-[cross-notebook analysis — see step 7]
+[cross-notebook analysis — same-window patterns per step 7, plus Historical Connections per step 8]
 
 ---
 
 ## Literature Connections
 
-[literature search results — see step 8]
+[literature search results — see step 9]
 
 ---
 
@@ -136,12 +136,63 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
    ### Apparent Contradictions
    - [bullet per contradiction, each ending with: "⚠️ Needs human verification — [one sentence on what would resolve it]."]
+
+   ### Historical Connections
+   - [bullet per multi-week connection — see step 8]
    ```
 
-   If there are no connections at all, replace the entire section body with:
-   `_No cross-notebook connections identified in this window._`
+   If there are no same-window connections at all (Shared Themes, Temporal Narratives, and Apparent Contradictions are all empty), write `_No cross-notebook connections identified in this window._` in place of those three sub-headings — but still run step 8 and append the `### Historical Connections` sub-heading below that line if step 8 finds anything. Only if step 8 also finds nothing is the section body entirely this one line.
 
-8. **Write the Literature Connections section** by running the `literature-connector` skill for each notable finding. This step involves multiple external API calls and will take longer than the rest of the digest — that is expected.
+8. **Write the Historical Connections subsection** (the `### Historical Connections` sub-heading inside Cross-Notebook Patterns & Connections). Run this **after** the same-window pattern detection in step 7 has finished, because it operates on the findings that step 7 (and the step-9 selection rule) already flagged as notable. This subsection reaches back into the lab's own archive to find multi-week story arcs that the single-window analysis cannot see.
+
+    **Selecting findings to check:** use the **exact same prioritization as step 9's literature-connector selection** — every specific finding named in the Cross-Notebook Patterns & Connections same-window subsections (Shared Themes, Temporal Narratives, Apparent Contradictions), plus the same 2–4 additional substantial standalone findings from the per-source summaries. Do not build a separate list; reuse the step-9 finding set so the two sections stay in sync.
+
+    **Query scope — the prior 8 weeks, excluding the current window.** Define:
+    - `hist_start` = `week_start` minus 56 days (YYYY-MM-DD)
+    - `hist_end` = `week_start` minus 1 day (YYYY-MM-DD)
+
+    Only archive posts with `date` between `hist_start` and `hist_end` inclusive are eligible. This deliberately excludes the current window (`week_start`…`week_end`) so this subsection never re-surfaces a post already shown in the per-source sections or the same-window analysis above. Note that `posts.date` is `NULL` on a few archived posts; the `BETWEEN` bound evaluates to false for those, so undated posts are intentionally excluded (a post with no date cannot be placed in the 8-week window) — this is expected, not a bug. As a second guard, also discard any archive result whose `url` matches a post already surfaced anywhere in this digest (per-source sections or step 7 bullets), so nothing is duplicated across the digest.
+
+    **Querying the archive — read-only, exactly like `lab-archive`.** Open the same read-only connection and issue only `SELECT`s; never write to or rebuild the database. If `.cache/archive.db` does not exist (or has no `posts` table), do not build it — skip this subsection entirely and note nothing (the rest of the digest proceeds normally). For each selected finding, reduce it to the **specific named entities** it involves (the exact species, the exact assay/method, the named project or experiment) and build an FTS5 `MATCH` string over those entities, following `lab-archive`'s term-derivation and sanitization rules (quote any term containing FTS5 syntax characters, group synonyms with `OR`, use prefix `*` where helpful). Then run, with the date bound applied:
+
+    ```python
+    import sqlite3
+    conn = sqlite3.connect("file:.cache/archive.db?mode=ro", uri=True)
+    SQL = """
+    SELECT p.author, p.source, p.date, p.title, p.url, p.shadowed,
+           snippet(posts_fts, 1, '**', '**', ' … ', 12) AS snip
+    FROM posts_fts f
+    JOIN posts p ON p.id = f.rowid
+    WHERE posts_fts MATCH ?
+      AND p.date BETWEEN ? AND ?
+    ORDER BY p.date DESC, bm25(posts_fts)
+    LIMIT 40
+    """
+    rows = conn.execute(SQL, (match_string, hist_start, hist_end)).fetchall()
+    ```
+
+    Wrap the `MATCH` in try/except and re-quote on an FTS5 syntax error, exactly as `lab-archive` does.
+
+    **What counts as a connection (conservatism carries over).** A candidate archive post qualifies **only** if it shares a **real, specific, named entity** with the current finding — the same species, the same assay, the same named project/experiment — **and** reads as though it *sets up*, *follows up on*, *resolves*, or *contradicts* the current finding across the weeks. Apply the same conservatism rule as step 7: never surface a connection built on a vague thematic match ("both about oysters", "both involve stress") — the shared entity must be specific and named. Apply `lab-archive`'s relevance check too: discard incidental keyword hits where the entity is only mentioned in passing.
+
+    **Contradictions get flagged for verification.** If a candidate connection looks like it might be an **apparent contradiction** (the archived post's result appears to conflict with the current finding) rather than a clean set-up/follow-up/resolution, flag it the same way step 7's Apparent Contradictions subsection does: end that bullet with `⚠️ Needs human verification — [one sentence on what would resolve it].`
+
+    **Shadowed posts.** If a qualifying archive post has `shadowed = 1`, append the same caveat `lab-archive` uses next to its link: `⚠️ *shadowed URL — this permalink is shared by another post in the same notebook, so it may not resolve to this exact post on the live site; verify against the source before treating it as a clean live link.*`
+
+    **Omit silently when empty per finding.** Most findings will have no multi-week connection — that is expected. For a finding with no genuine historical connection, **write nothing at all** for it in this subsection (do not add a "none found" line per finding — that would be noise). Only if **no finding** across the whole set yields any connection do you write the single line:
+    `_No historical connections identified in the last 8 weeks._`
+    (In that case the `### Historical Connections` sub-heading is still shown with just that line, unless the entire Cross-Notebook section collapsed to the "no cross-notebook connections" line per step 7, in which case omit the sub-heading.)
+
+    **Format** each surviving connection as one bullet under `### Historical Connections`, naming the shared entity, the direction of the arc, and citing the archived post by its actual `url` (never reconstruct a URL — cite the `url` the query returned):
+
+    ```
+    ### Historical Connections
+    - **[shared entity]** — [current finding, and how the archived post sets it up / follows up / resolves / contradicts it]. See [archived post title] · [YYYY-MM-DD] ([author], [source label]): [permalink]
+      [⚠️ shadowed-URL caveat, only if shadowed=1]
+      [⚠️ Needs human verification — ..., only if this is an apparent contradiction]
+    ```
+
+9. **Write the Literature Connections section** by running the `literature-connector` skill for each notable finding. This step involves multiple external API calls and will take longer than the rest of the digest — that is expected.
 
    **Selecting findings to check:**
    - First, include every specific finding already named in the Cross-Notebook Patterns & Connections section (shared themes, temporal narratives, apparent contradictions). These are the highest-priority targets because they are the most scientifically notable and cross-validated.
@@ -185,7 +236,7 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
    Do not copy the literature-connector's full header block (query strings, retrieval counts, caveats) into the digest — those details belong in the literature-connector's own standalone output, not here. Carry over only the relevant literature entries and the summary paragraph per finding.
 
-9. **Write the file** to:
+10. **Write the file** to:
    `digests/full-lab-digest-[week_end]-[days]d.md`
    (e.g. `digests/full-lab-digest-2026-07-13-7d.md` for a 7-day window, `digests/full-lab-digest-2026-07-27-14d.md` for a 14-day one)
 
@@ -193,11 +244,11 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
    This path is relative to the repository root, which is the working directory Claude Code starts in.
 
-10. **Update the digest state file** at `digests/.digest-state.json` so future digests know these posts have now been covered.
+11. **Update the digest state file** at `digests/.digest-state.json` so future digests know these posts have now been covered.
 
     - Set `last_digest_date` to today's date (`week_end`, YYYY-MM-DD).
     - Add the newly-included post URLs collected in step 3 to `digested_urls` (union — keep all pre-existing entries, append the new ones, and do not add duplicates). Do **not** add excluded/already-covered URLs again (they are already present), and do not add image, repo-root, or literature URLs.
     - If the state file did not exist (first run), create it now with `last_digest_date` set to today and `digested_urls` set to every post URL included in this digest.
     - Write valid JSON with the same two top-level keys. Keep this file committed alongside the digests — it must persist across machines and collaborators for the tracking to work, so never add it to `.gitignore`.
 
-11. **Return the file path** to the user in the main conversation.
+12. **Return the file path** to the user in the main conversation.
