@@ -156,9 +156,13 @@ def markdown_to_html(body: str):
     return completed.stdout, "pandoc"
 
 
-def post_draft(site: str, token: str, title: str, content: str):
+def post_draft(site: str, token: str, title: str, content: str, categories=None):
     """POST the draft. Returns (http_status, parsed_body_or_text)."""
-    payload = json.dumps({"title": title, "content": content, "status": "draft"})
+    body = {"title": title, "content": content, "status": "draft"}
+    if categories:
+        # WordPress creates any category name it doesn't already know.
+        body["categories"] = list(categories)
+    payload = json.dumps(body)
     request = Request(
         API_BASE.format(site=site),
         data=payload.encode("utf-8"),
@@ -195,6 +199,13 @@ def main():
     parser.add_argument("--site", default=DEFAULT_SITE, help="WordPress.com site domain")
     parser.add_argument("--token-file", default=DEFAULT_TOKEN_FILE, help="path to the API token")
     parser.add_argument(
+        "--category",
+        action="append",
+        dest="categories",
+        metavar="NAME",
+        help="assign the draft to this category (repeatable); created if it does not exist",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="convert and sanitize only; do not read the token or contact the API",
@@ -221,6 +232,7 @@ def main():
                 "digest": args.digest,
                 "title": title,
                 "converter": converter,
+                "categories": args.categories or [],
                 "tags_removed_approx": max(0, removed),
                 "content_bytes": len(content),
                 "content_preview": content[:1500],
@@ -235,7 +247,7 @@ def main():
         fail(str(e))
 
     try:
-        status, payload = post_draft(args.site, token, title, content)
+        status, payload = post_draft(args.site, token, title, content, args.categories)
     except (URLError, OSError) as e:
         fail(f"Could not reach the WordPress API: {e}. Check your network and retry.")
     finally:
@@ -245,6 +257,7 @@ def main():
         "http_status": status,
         "title": title,
         "converter": converter,
+        "categories": args.categories or [],
         "tags_removed_approx": max(0, removed),
         "warnings": warnings,
     }

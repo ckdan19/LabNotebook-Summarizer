@@ -86,6 +86,9 @@ def collect_posts(site: str, cutoff: datetime, per_page: int, max_pages: int, ti
                     "title": strip_html(post.get("title", "")),
                     "url": post.get("URL", ""),
                     "content": strip_html(post.get("content") or post.get("excerpt") or ""),
+                    # WordPress returns categories as an object keyed by category name;
+                    # downstream consumers only need the names.
+                    "categories": sorted((post.get("categories") or {}).keys()),
                 }
             )
 
