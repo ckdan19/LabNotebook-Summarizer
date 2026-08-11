@@ -9,125 +9,6 @@ rather than being renumbered.
 
 ## Longer term — features
 
-### 11. Searchable archive of all notebook history
-
-Every path through the repo today is window-scoped: `fetch_github_notebook.py` builds
-its file list from `commits?since=...`, `fetch_lab_posts.py` takes `--days`, and
-`digests/.digest-state.json` remembers post URLs only in order to *exclude* them. So
-the tool answers "what happened last week" but cannot answer the question a lab
-actually asks constantly — "has anyone here done this before, and what did they find?"
-Sam's 2026-07-30 Glycogen-Glo post is a live example: four samples read above the
-standard curve and need re-assay at 2×–6× further dilution, and someone in the lab has
-plausibly already solved that. Finding out means manually grepping four GitHub repos
-and a WordPress site.
-
-The feature: an incrementally-built local corpus of every post from all five sources —
-one row per post with source, author, date, URL, categories, and full text — plus a
-`lab-archive` skill that queries it.
-
-1. **`scripts/build_archive.py`** — enumerate each repo's posts directory via the git
-   tree API (one call per repo, rather than the per-commit walk the windowed fetch
-   needs), fetch bodies, and store in SQLite with an FTS5 index. Stdlib only, matching
-   the existing no-new-runtime-dependency stance. Incremental: skip any path whose blob
-   SHA is unchanged since the last build, so re-runs are nearly free. WordPress posts
-   come from the same REST endpoint `fetch_lab_posts.py` already pages through, with the
-   window removed.
-2. **Share the parsing.** Front-matter, permalink derivation, and post-body handling
-   already exist in `build_post` in `fetch_github_notebook.py`; factor that so the
-   archive builder and the windowed fetch use one implementation rather than drifting.
-3. **`.claude/skills/lab-archive/SKILL.md`** — takes a plain-English question, runs FTS
-   queries, and returns hits grouped by researcher with dates and permalinks. Answers
-   cite posts; never paraphrase a result without linking it.
-4. **Feed it back into the digest.** A "Prior work in this lab" line per notable
-   finding, resolved against the archive.
-
-Keyword FTS is the right first cut: lab vocabulary is unusually precise
-(`Glycogen-Glo`, `topGO`, `resazurin`) and exact-term matching beats embeddings on
-jargon with no model dependency. If recall proves too tight, embeddings can layer onto
-the same table later.
-
-Two things to settle before building it:
-
-- **Backfill cost.** The first build fetches every post body across five sources, which
-  is far more GitHub API calls than a weekly run. Needs `GITHUB_TOKEN` and probably a
-  resumable build (record completed paths, continue after a rate-limit stop) so a
-  failure halfway through does not restart from zero.
-- **Where the DB lives.** It is a derived artifact, so it should be `.gitignore`d and
-  rebuildable from scratch — but that means each clone pays the backfill once. Decide
-  that explicitly rather than committing a binary by accident.
-
-Strengthens item 8 (cross-notebook analysis over weeks gets a full-history substrate
-instead of a walk over prior digest files) and item 5 (a prior-work check on the
-archive is free, where a literature search is not).
-
-### 6. Schedule the weekly run
-
-The digest is generated manually. Automate it as a scheduled Claude Code task (or a
-GitHub Action) that runs `full-lab-digest` weekly, commits the result to `digests/`,
-and opens the WordPress draft. Keep publishing as `draft` — the human review step is
-the point.
-
-### 8. Extend cross-notebook analysis across weeks
-
-Cross-notebook pattern detection currently looks only within a single window's five
-summaries. The more interesting narratives (an experiment set up in one week and
-resolved three weeks later) span weeks. Item 4's durable per-post state is now in
-place, so the remaining work is the multi-week pass over prior digests — and if item
-11 lands first, run the pass over the post archive itself rather than over the digests
-written about it.
-
-### 9. Daily literature-connection post on genefish.wordpress.com
-
-Today the literature work only happens inside a weekly/multi-day digest, and the
-output lands in `digests/` plus a WordPress draft that a human opens. The feature:
-**every day, consider the new posts on genefish.wordpress.com, draft a post that
-connects them to recent literature, and put that post back on
-genefish.wordpress.com.**
-
-Shape of the daily run:
-
-1. **Fetch the day's posts** — `python3 scripts/fetch_lab_posts.py --days 1`
-   (`--days` already exists; the default of 7 is the only thing that needs
-   overriding). If `posts` is empty, exit quietly without posting — a no-activity
-   day should produce nothing, not an empty post.
-2. **Exclude already-connected posts** — reuse the state mechanism from item 4.
-   Either extend `digests/.digest-state.json` with a `connected_urls` list or add a
-   sibling `digests/.literature-state.json`; a post that already got a connection
-   post never gets a second one, even if a later run's window still contains it.
-3. **Derive TOPIC and FINDING per post** — `literature-connector` requires both
-   (see [literature-connector/SKILL.md](.claude/skills/literature-connector/SKILL.md)),
-   and its inputs are currently supplied by a human. The daily run has to infer them
-   from the post body. Purely logistical posts (meeting notes, ordering, equipment)
-   have no finding to connect; skip them rather than inventing one, and if every post
-   that day is logistical, treat the day as empty and post nothing.
-4. **Run `literature-connector`** per remaining post and assemble one Markdown post —
-   sections per source post, each with the relationship-tagged papers and the
-   preprint caveat block the skill already emits.
-5. **Publish** via `scripts/publish_digest.py`, same path as
-   [wordpress-publisher/SKILL.md](.claude/skills/wordpress-publisher/SKILL.md) — the
-   Markdown never touches a shell, only the file path does.
-
-Three things to settle before building it:
-
-- **Feedback loop.** The connection post is published to the same site the daily
-  fetch reads, so the next run will see it as a new post and try to connect the
-  connections. The fetch has to filter these out — by tag/category applied at
-  publish time, by author, or by recording each published post's URL in the state
-  file. Whichever is chosen, the filter has to be verified, not assumed; getting it
-  wrong produces a self-feeding loop that posts daily forever.
-- **Draft vs. live.** `publish_digest.py` hardcodes `status: draft`, and
-  `wordpress-publisher` requires explicit per-run confirmation before it sends
-  anything. A genuinely daily unattended post needs a deliberate decision to relax
-  one or both — a `--status publish` flag plus a standing authorization recorded
-  somewhere durable. Defaulting to draft and letting a human hit publish is the safer
-  starting point and still delivers the daily drafting.
-- **Search volume.** A daily run hits PubMed and Europe PMC every day instead of
-  weekly, on largely the same ongoing projects. Item 5's cache stops being a
-  nice-to-have here.
-
-Depends on item 4 (state) and pairs with item 6 (the scheduling mechanism is the
-same, just at daily cadence).
-
 ### 12. Literature links as comments on genefish.wordpress.com posts
 
 A lighter-weight variant of item 9 that puts the connection where the work is instead
@@ -248,3 +129,40 @@ the per-source summaries before compiling, with a per-source note of how many we
 omitted; a missing state file is treated as a first run. Canonical post URLs only
 are matched, trailing slash insensitive — image, repo-root, and literature links are
 never tracked.
+
+### 11. Searchable archive of all notebook history
+
+`scripts/build_archive.py` builds an incremental local corpus of every post across all
+five sources into a git-ignored SQLite database (`.cache/archive.db`) with an FTS5
+index — stdlib only, blob-SHA-skip so re-runs are near-free, and resumable across
+rate-limit stops. Parsing is shared with the windowed fetch via
+`scripts/notebook_parsing.py` rather than duplicated. The `lab-archive` skill answers
+plain-English "has anyone here done this before" questions read-only against that DB,
+grouped by researcher with a cited link per claim. See
+[lab-archive/SKILL.md](.claude/skills/lab-archive/SKILL.md).
+
+### 8. Extend cross-notebook analysis across weeks
+
+`full-lab-digest` now runs a Historical Connections pass (step 8) after the
+same-window pattern detection, reaching back into the lab archive (item 11) to surface
+multi-week story arcs — an experiment set up in one week and resolved weeks later —
+that single-window analysis cannot see. Each surviving connection is a bullet naming
+the shared entity and the direction of the arc, citing the archived post by its actual
+returned URL; empty findings are omitted silently. See
+[full-lab-digest/SKILL.md](.claude/skills/full-lab-digest/SKILL.md).
+
+### 9. Daily literature-connection post on genefish.wordpress.com
+
+The `daily-literature-post` skill fetches the last day of lab posts, keeps only those
+describing a real scientific finding, runs `literature-connector` per finding, and
+assembles one Markdown post published to WordPress as a **draft**. The draft carries
+the `auto-literature-connections` category so it is excluded from future daily runs,
+and every processed post is recorded in `digests/.literature-state.json` so it is
+never processed twice — closing the feedback loop. Draft-only by design. See
+[daily-literature-post/SKILL.md](.claude/skills/daily-literature-post/SKILL.md).
+
+### 6. Schedule the weekly run
+
+The weekly digest now runs on a schedule rather than by hand, running `full-lab-digest`,
+committing the result to `digests/`, and opening the WordPress draft. Publishing stays
+as `draft` so the human review step is preserved.
