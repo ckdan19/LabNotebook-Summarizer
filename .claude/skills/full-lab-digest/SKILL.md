@@ -95,6 +95,8 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
 ## Cross-Notebook Patterns & Connections
 
+_This section analyzes the compiled per-source summaries for shared themes, follow-up narratives, apparent contradictions, and multi-week historical connections across the lab's notebooks. Connections are surfaced only when a specific named entity ties the sources together — never from vague thematic similarity._
+
 [cross-notebook analysis — same-window patterns per step 7, plus Historical Connections per step 8]
 
 ---
