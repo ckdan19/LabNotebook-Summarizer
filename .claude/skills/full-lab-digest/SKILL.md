@@ -208,13 +208,15 @@ _This section consolidates, grouped by source, the figure links and external dat
      - **Figure links** — the entries the subagents list under per-post `Figures:` listings, both local repo-hosted image paths and external image/figure URLs.
      - **Data/repository links** — any linked external dataset, repository, or data-hosting URL the subagent surfaced (e.g., a linked GitHub repo, an OSF/Zenodo/figshare record, a raw data file). Do **not** include the canonical post URL itself, or the repo-root/notebook-home links — those are navigation, not data.
 
+   - **Sort each link into one of two output groups.** The two link kinds above form the **primary group** (this project's own data and figures). Then split out a **secondary group, "Related links (tools, issues)"**: of the links that already qualify under "Data/repository links," route the two kinds that are *references rather than underlying data* into this second group instead of the primary one — **third-party tool/software repositories** (e.g., `github.com/OpenGene/fastp`) and **issue-tracker threads** (e.g., a GitHub issue URL). This is a routing rule only; it does not change what counts as in-scope, and a link the "Data/repository links" bullet already excludes stays excluded.
+
    - **Only use links that already appear in the compiled summaries.** Never invent a figure or data link, and never reconstruct one from memory — if a subagent did not surface it, it does not go here.
 
-   - **Group by source**, using the same five source labels and order as the per-source sections above (Tumbling Oysters, Ariana Huffmyer, Sam's Notebook, Grace Crandall, Genefish WordPress). Under each source, list its figure and data links. Attribute each link to the post it came from (post title or short label) so the entry point stays navigable. Omit a source that has no figure or data links (do not write an empty source sub-heading).
+   - **Group by source**, using the same five source labels and order as the per-source sections above (Tumbling Oysters, Ariana Huffmyer, Sam's Notebook, Grace Crandall, Genefish WordPress). Under each source, list its **primary** figure and data links first; then, if that source has any tool/issue links, add a `_Related links (tools, issues):_` line followed by those as sub-bullets. Attribute each link to the post it came from (post title or short label) so the entry point stays navigable. Omit a source that has no links in either group (do not write an empty source sub-heading), and omit the `_Related links (tools, issues):_` line for a source that has none.
 
    - **Deduplicate** obvious repeats — if the same URL appears more than once (e.g., the same figure linked from two posts, or an identical local path), list it once. Treat URLs that differ only by a trailing slash as the same URL.
 
-   - **Skip the whole section if empty.** If no figure or data links exist anywhere in the current window's posts, omit the `## Data & Figures` heading and its explanatory note entirely — do not emit an empty heading or a "none found" line.
+   - **Skip the whole section if empty.** If no links of any kind (primary or related) exist anywhere in the current window's posts, omit the `## Data & Figures` heading and its explanatory note entirely — do not emit an empty heading or a "none found" line.
 
    - **Format:**
 
@@ -226,12 +228,15 @@ _This section consolidates, grouped by source, the figure links and external dat
      ### Tumbling Oysters (Steven Roberts)
      - [post title or short label]: [figure/data link]
      - …
+     - _Related links (tools, issues):_
+       - [post title or short label]: [third-party tool repo or issue-tracker URL]
+       - …
 
      ### Ariana Huffmyer Lab Notebook
      - …
      ```
 
-     (Include only the source sub-headings that have at least one link.)
+     (Include only the source sub-headings that have at least one link, and include the `_Related links (tools, issues):_` line only for sources that have at least one tool/issue link.)
 
 10. **Write the Literature Connections section** by running the `literature-connector` skill for each notable finding. This step involves multiple external API calls and will take longer than the rest of the digest — that is expected.
 
