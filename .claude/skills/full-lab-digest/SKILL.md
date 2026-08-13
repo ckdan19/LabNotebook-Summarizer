@@ -101,9 +101,17 @@ _This section analyzes the compiled per-source summaries for shared themes, foll
 
 ---
 
+## Data & Figures
+
+_This section consolidates, grouped by source, the figure links and external data/repository links already surfaced in the per-source summaries above. It is a single entry point into the underlying data and figures for this window, not a new analysis._
+
+[consolidated data & figure links — see step 9. Omit this entire section, including the heading and note above, if no figures or data links appear anywhere in the current window's posts.]
+
+---
+
 ## Literature Connections
 
-[literature search results — see step 9]
+[literature search results — see step 10]
 
 ---
 
@@ -145,9 +153,9 @@ _This section analyzes the compiled per-source summaries for shared themes, foll
 
    If there are no same-window connections at all (Shared Themes, Temporal Narratives, and Apparent Contradictions are all empty), write `_No cross-notebook connections identified in this window._` in place of those three sub-headings — but still run step 8 and append the `### Historical Connections` sub-heading below that line if step 8 finds anything. Only if step 8 also finds nothing is the section body entirely this one line.
 
-8. **Write the Historical Connections subsection** (the `### Historical Connections` sub-heading inside Cross-Notebook Patterns & Connections). Run this **after** the same-window pattern detection in step 7 has finished, because it operates on the findings that step 7 (and the step-9 selection rule) already flagged as notable. This subsection reaches back into the lab's own archive to find multi-week story arcs that the single-window analysis cannot see.
+8. **Write the Historical Connections subsection** (the `### Historical Connections` sub-heading inside Cross-Notebook Patterns & Connections). Run this **after** the same-window pattern detection in step 7 has finished, because it operates on the findings that step 7 (and the step-10 selection rule) already flagged as notable. This subsection reaches back into the lab's own archive to find multi-week story arcs that the single-window analysis cannot see.
 
-    **Selecting findings to check:** use the **exact same prioritization as step 9's literature-connector selection** — every specific finding named in the Cross-Notebook Patterns & Connections same-window subsections (Shared Themes, Temporal Narratives, Apparent Contradictions), plus the same 2–4 additional substantial standalone findings from the per-source summaries. Do not build a separate list; reuse the step-9 finding set so the two sections stay in sync.
+    **Selecting findings to check:** use the **exact same prioritization as step 10's literature-connector selection** — every specific finding named in the Cross-Notebook Patterns & Connections same-window subsections (Shared Themes, Temporal Narratives, Apparent Contradictions), plus the same 2–4 additional substantial standalone findings from the per-source summaries. Do not build a separate list; reuse the step-10 finding set so the two sections stay in sync.
 
     **Query scope — the prior 8 weeks, excluding the current window.** Define:
     - `hist_start` = `week_start` minus 56 days (YYYY-MM-DD)
@@ -194,7 +202,38 @@ _This section analyzes the compiled per-source summaries for shared themes, foll
       [⚠️ Needs human verification — ..., only if this is an apparent contradiction]
     ```
 
-9. **Write the Literature Connections section** by running the `literature-connector` skill for each notable finding. This step involves multiple external API calls and will take longer than the rest of the digest — that is expected.
+9. **Write the Data & Figures section** by consolidating the figure and data/repository links that the five subagents already surfaced in their per-source summaries. This is a reorganization step only — it uses the compiled summaries you already have and issues no new fetches, subagent runs, or external calls.
+
+   - **Gather the links.** Scan each per-source summary (the verbatim subagent output pasted under each `##` header, after the step-3 exclusion) for two kinds of links:
+     - **Figure links** — the entries the subagents list under per-post `Figures:` listings, both local repo-hosted image paths and external image/figure URLs.
+     - **Data/repository links** — any linked external dataset, repository, or data-hosting URL the subagent surfaced (e.g., a linked GitHub repo, an OSF/Zenodo/figshare record, a raw data file). Do **not** include the canonical post URL itself, or the repo-root/notebook-home links — those are navigation, not data.
+
+   - **Only use links that already appear in the compiled summaries.** Never invent a figure or data link, and never reconstruct one from memory — if a subagent did not surface it, it does not go here.
+
+   - **Group by source**, using the same five source labels and order as the per-source sections above (Tumbling Oysters, Ariana Huffmyer, Sam's Notebook, Grace Crandall, Genefish WordPress). Under each source, list its figure and data links. Attribute each link to the post it came from (post title or short label) so the entry point stays navigable. Omit a source that has no figure or data links (do not write an empty source sub-heading).
+
+   - **Deduplicate** obvious repeats — if the same URL appears more than once (e.g., the same figure linked from two posts, or an identical local path), list it once. Treat URLs that differ only by a trailing slash as the same URL.
+
+   - **Skip the whole section if empty.** If no figure or data links exist anywhere in the current window's posts, omit the `## Data & Figures` heading and its explanatory note entirely — do not emit an empty heading or a "none found" line.
+
+   - **Format:**
+
+     ```
+     ## Data & Figures
+
+     _This section consolidates, grouped by source, the figure links and external data/repository links already surfaced in the per-source summaries above. It is a single entry point into the underlying data and figures for this window, not a new analysis._
+
+     ### Tumbling Oysters (Steven Roberts)
+     - [post title or short label]: [figure/data link]
+     - …
+
+     ### Ariana Huffmyer Lab Notebook
+     - …
+     ```
+
+     (Include only the source sub-headings that have at least one link.)
+
+10. **Write the Literature Connections section** by running the `literature-connector` skill for each notable finding. This step involves multiple external API calls and will take longer than the rest of the digest — that is expected.
 
    **Selecting findings to check:**
    - First, include every specific finding already named in the Cross-Notebook Patterns & Connections section (shared themes, temporal narratives, apparent contradictions). These are the highest-priority targets because they are the most scientifically notable and cross-validated.
@@ -238,7 +277,7 @@ _This section analyzes the compiled per-source summaries for shared themes, foll
 
    Do not copy the literature-connector's full header block (query strings, retrieval counts, caveats) into the digest — those details belong in the literature-connector's own standalone output, not here. Carry over only the relevant literature entries and the summary paragraph per finding.
 
-10. **Write the file** to:
+11. **Write the file** to:
    `digests/full-lab-digest-[week_end]-[days]d.md`
    (e.g. `digests/full-lab-digest-2026-07-13-7d.md` for a 7-day window, `digests/full-lab-digest-2026-07-27-14d.md` for a 14-day one)
 
@@ -246,11 +285,11 @@ _This section analyzes the compiled per-source summaries for shared themes, foll
 
    This path is relative to the repository root, which is the working directory Claude Code starts in.
 
-11. **Update the digest state file** at `digests/.digest-state.json` so future digests know these posts have now been covered.
+12. **Update the digest state file** at `digests/.digest-state.json` so future digests know these posts have now been covered.
 
     - Set `last_digest_date` to today's date (`week_end`, YYYY-MM-DD).
     - Add the newly-included post URLs collected in step 3 to `digested_urls` (union — keep all pre-existing entries, append the new ones, and do not add duplicates). Do **not** add excluded/already-covered URLs again (they are already present), and do not add image, repo-root, or literature URLs.
     - If the state file did not exist (first run), create it now with `last_digest_date` set to today and `digested_urls` set to every post URL included in this digest.
     - Write valid JSON with the same two top-level keys. Keep this file committed alongside the digests — it must persist across machines and collaborators for the tracking to work, so never add it to `.gitignore`.
 
-12. **Return the file path** to the user in the main conversation.
+13. **Return the file path** to the user in the main conversation.
