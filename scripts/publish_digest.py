@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Convert a Markdown digest to sanitized HTML and post it to WordPress.com as a draft.
+"""Convert a Markdown digest to sanitized HTML and post it to WordPress.com.
+
+Posts are created as a draft by default. Pass --status publish to publish live; this is
+an explicit override and is never the default, so a caller must ask for it deliberately.
 
 The token is read from disk by this process and passed only in a request header, so it
 never appears in a shell command line, in argv, or in this script's output. Digest text
@@ -156,9 +159,13 @@ def markdown_to_html(body: str):
     return completed.stdout, "pandoc"
 
 
-def post_draft(site: str, token: str, title: str, content: str, categories=None):
-    """POST the draft. Returns (http_status, parsed_body_or_text)."""
-    body = {"title": title, "content": content, "status": "draft"}
+def post_digest(site: str, token: str, title: str, content: str, categories=None,
+                status: str = "draft"):
+    """POST the digest with the given status ('draft' or 'publish').
+
+    Returns (http_status, parsed_body_or_text).
+    """
+    body = {"title": title, "content": content, "status": status}
     if categories:
         # WordPress creates any category name it doesn't already know.
         body["categories"] = list(categories)
@@ -206,6 +213,15 @@ def main():
         help="assign the draft to this category (repeatable); created if it does not exist",
     )
     parser.add_argument(
+        "--status",
+        choices=["draft", "publish"],
+        default="draft",
+        help=(
+            "post status. Default 'draft'. Pass 'publish' as an explicit override to "
+            "publish the post live immediately."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="convert and sanitize only; do not read the token or contact the API",
@@ -231,6 +247,7 @@ def main():
                 "dry_run": True,
                 "digest": args.digest,
                 "title": title,
+                "target_status": args.status,
                 "converter": converter,
                 "categories": args.categories or [],
                 "tags_removed_approx": max(0, removed),
@@ -247,7 +264,9 @@ def main():
         fail(str(e))
 
     try:
-        status, payload = post_draft(args.site, token, title, content, args.categories)
+        status, payload = post_digest(
+            args.site, token, title, content, args.categories, args.status
+        )
     except (URLError, OSError) as e:
         fail(f"Could not reach the WordPress API: {e}. Check your network and retry.")
     finally:
@@ -263,8 +282,12 @@ def main():
     }
 
     if status in (200, 201):
+        # Report what the post actually became. WordPress returns the resulting status
+        # in the payload; fall back to the status we requested if it is absent.
+        posted_status = payload.get("status", args.status)
         result.update({
-            "status": "draft created",
+            "status": "published live" if posted_status == "publish" else "draft created",
+            "post_status": posted_status,
             "url": payload.get("URL", ""),
             "short_url": payload.get("short_URL", ""),
             "post_id": payload.get("ID", ""),

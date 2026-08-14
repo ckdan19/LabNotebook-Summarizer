@@ -4,11 +4,16 @@ Trigger this skill when the user asks to **run the daily literature connection p
 
 ## What this skill does
 
-Fetches the last day of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress as a **draft**. The draft is tagged with the `auto-literature-connections` category so it is excluded from future daily runs, and every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
+Fetches the last day of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress. The post is tagged with the `auto-literature-connections` category so it is excluded from future daily runs, and every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
 
 This is a narrow daily counterpart to `full-lab-digest`: it does not summarize the notebooks, run subagents, or search the archive — it only connects today's genuine findings to external literature.
 
-**Draft only.** This skill never publishes live. It always publishes with `status: draft` (which `publish_digest.py` does unconditionally). Do not change this without an explicit instruction from the user.
+**Live publishing is authorization-gated; draft is the safe default.** This skill publishes **live only when a durable authorization file is present**; otherwise it falls back to a draft. Two independent rails protect this (both enforced in step 7):
+
+1. **Authorization file.** Live publishing requires `AUTHORIZATION.md` at the repository root containing the exact marker `AUTOMATED PUBLISHING: AUTHORIZED`. If the file is missing, unreadable, or lacks that marker, the skill publishes a **draft** and says so in its report. There is no way to publish live without this file — deleting or editing out the marker instantly reverts the skill to draft-only.
+2. **One-post-per-day cap.** The skill publishes at most **one** post per day (live or draft). If the state file already records a publish for today, it refuses to publish again rather than posting a duplicate.
+
+Never publish live by any other route (e.g., hand-passing `--status publish` outside these rails). The rails exist so the pipeline stays safe when it runs unattended after the original author has left the lab. See `AUTHORIZATION.md` for who approved live publishing and how to pause or disable it.
 
 ## State file — `digests/.literature-state.json`
 
@@ -19,13 +24,19 @@ This skill keeps persistent state in `digests/.literature-state.json` (path rela
   "last_run_date": "2026-08-10",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/08/09/some-real-finding/"
+  ],
+  "publish_log": [
+    {"date": "2026-08-10", "status": "draft", "url": "https://genefish.wordpress.com/?p=123"}
   ]
 }
 ```
 
 `connected_urls` is the set of every post URL this skill has already processed (turned into a literature section) in any previous run. It is committed to the repo — **never** add it to `.gitignore` — so de-duplication works across machines and collaborators.
 
-- **If the file does not exist** (first run): treat `connected_urls` as an empty set, exclude nothing on that basis, and create the file in the state-update step below.
+`publish_log` records every post this skill has published, one entry per publish, each with the `date` (YYYY-MM-DD) it was published, the `status` it was published with (`"draft"` or `"publish"`), and the resulting post `url`. It drives the **one-post-per-day cap** (step 7): the number of entries whose `date` equals today is the count of posts already published today.
+
+- **If the file does not exist** (first run): treat `connected_urls` as an empty set and `publish_log` as an empty list, exclude nothing on that basis, and create the file in the state-update step below.
+- **If `publish_log` is missing from an older state file:** treat it as an empty list (no publishes recorded yet) and add it when you next write the file.
 - Match on the canonical post URL only. Treat URLs that differ solely by a trailing slash as the same URL.
 
 ## Steps
@@ -111,17 +122,41 @@ Build a single Markdown document with one section per included source post. The 
 - Preserve `literature-connector`'s **relationship tags** (Supports / Conflicts / Adds context / Suggests next step) and **source badges** (`[PubMed]`, `[bioRxiv preprint — not peer-reviewed]`, etc.) verbatim — do not rewrite them.
 - Carry over the **preprint caveat block** from `literature-connector` at the bottom of the assembled post (the blockquote noting coverage is limited to the last 12 months and that preprints are not peer-reviewed) so the caveat travels with the published draft. Do not copy `literature-connector`'s full header block (query strings, retrieval counts) into the post.
 
-### 7. Publish as a draft, tagged with the category
+### 7. Enforce the daily cap, decide live vs. draft, then publish
 
-Write the assembled Markdown to a file first (so `publish_digest.py` can read it), e.g. `digests/daily-literature-[today].md`, then publish:
+Write the assembled Markdown to a file first (so `publish_digest.py` can read it), e.g. `digests/daily-literature-[today].md`. Then run the two safety rails **in this order** before publishing.
+
+#### 7a. Daily cap — refuse a second post today
+
+Read `digests/.literature-state.json` and count the entries in `publish_log` whose `date` equals today (YYYY-MM-DD). **If that count is 1 or more, do not publish anything.** Stop here: produce no new post, leave the state file unchanged, and report in step 9 that the skill has already published today and is refusing a second post per the one-post-per-day cap (quote the existing entry's status and URL). This is a hard stop, not a warning — it prevents duplicate posts if the skill is triggered twice in a day.
+
+If the count is 0, continue.
+
+#### 7b. Authorization check — live only if explicitly authorized
+
+Decide the publish status by inspecting `AUTHORIZATION.md` at the repository root:
+
+- Read the file at `AUTHORIZATION.md` (repo root).
+- **Publish live** (`--status publish`) **only if** the file exists, is readable, and its text contains the exact marker `AUTOMATED PUBLISHING: AUTHORIZED`.
+- **Otherwise fall back to draft** (`--status draft`): if the file is missing, cannot be read, or does not contain that exact marker. Do not attempt to "fix" or interpret a near-miss marker — anything other than an exact match means draft.
+
+Remember which mode you chose; you must report it in step 9.
+
+#### 7c. Publish
+
+Publish with the status you determined in 7b:
 
 ```
-python3 scripts/publish_digest.py digests/daily-literature-[today].md --category auto-literature-connections
+# When AUTHORIZATION.md authorizes live publishing:
+python3 scripts/publish_digest.py digests/daily-literature-[today].md --category auto-literature-connections --status publish
+
+# Otherwise (default / unauthorized fallback):
+python3 scripts/publish_digest.py digests/daily-literature-[today].md --category auto-literature-connections --status draft
 ```
 
-`publish_digest.py` always posts with `status: draft` — this is draft-only by design. The `--category auto-literature-connections` flag tags the draft so step 3 of future runs correctly excludes it (WordPress creates the category if it does not already exist).
+`--status draft` is also the script's default, so omitting `--status` is equivalent to the draft command; pass it explicitly here to make the chosen mode unambiguous. The `--category auto-literature-connections` flag tags the post so step 3 of future runs correctly excludes it (WordPress creates the category if it does not already exist).
 
-Confirm the command returned an HTTP 200/201 and a draft URL before proceeding. If publishing fails, report the error and **do not** update the state file (step 8) — the posts were not successfully connected/published, so they should remain eligible for the next run.
+Confirm the command returned an HTTP 200/201 and a URL before proceeding, and note the reported `post_status` (`publish` or `draft`) — it should match the mode you intended. If publishing fails, report the error and **do not** update the state file (step 8) — the posts were not successfully connected/published, so they should remain eligible for the next run.
 
 ### 8. Update the state file
 
@@ -129,15 +164,17 @@ After a successful publish, update `digests/.literature-state.json`:
 
 - Set `last_run_date` to today's date (YYYY-MM-DD).
 - Add every post URL **processed this run** to `connected_urls` (union — keep all existing entries, append the new ones, no duplicates). "Processed" means every post that survived steps 2–4 and was evaluated by `literature-connector` in step 5 — **including** posts whose section was omitted for lack of relevant literature. This ensures a logistical-free post with no literature hits is not re-evaluated tomorrow.
+- **Append one entry to `publish_log`** recording this publish: `{"date": "<today>", "status": "<publish|draft>", "url": "<the URL publish_digest.py returned>"}`. Use the actual `post_status` from the publish output for `status`. This entry is what the step 7a cap reads tomorrow — and, if the skill is somehow triggered again today, what makes 7a refuse a second post.
 - Do not add posts excluded in steps 2–4 as logistical/already-processed/own-output (already-processed ones are already present; logistical and own-output ones were never real candidates).
-- If the file did not exist, create it now with `last_run_date` = today and `connected_urls` = the processed URLs.
-- Write valid JSON with the same two top-level keys. Keep the file committed — never gitignore it.
+- If the file did not exist, create it now with `last_run_date` = today, `connected_urls` = the processed URLs, and `publish_log` = a list containing the single entry for this publish.
+- Write valid JSON with the same three top-level keys (`last_run_date`, `connected_urls`, `publish_log`). Keep the file committed — never gitignore it.
 
 ### 9. Report back
 
 In the main conversation, report one of:
 
-- **Published:** the draft URL, how many source posts were included, and their titles.
+- **Published:** the post URL, **whether it went out live or as a draft**, and — when it fell back to draft — the reason (no `AUTHORIZATION.md`, missing/altered `AUTOMATED PUBLISHING: AUTHORIZED` marker, or unreadable file). Also give how many source posts were included and their titles.
+- **Refused (daily cap):** the skill already published today. Report that it is refusing a second post per the one-post-per-day cap, and quote today's existing `publish_log` entry (status + URL). The state file is left unchanged.
 - **Nothing qualified today:** state plainly why (no posts in the window, all posts logistical, all already processed, or no relevant literature found for any finding). Note whether the state file was updated (it is only updated when at least one post was actually evaluated by `literature-connector`).
 
-Never fabricate a published draft or literature results — if a step produced nothing, say so.
+Never fabricate a published post or literature results, and never claim a post was published live when it fell back to draft — if a step produced nothing, say so.
