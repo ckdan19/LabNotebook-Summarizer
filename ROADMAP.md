@@ -59,14 +59,6 @@ Shares items 1–4 of item 9's pipeline; the two should be built as one daily ru
 choice of output surface rather than twice. Depends on item 4 (state) and wants item 5
 (cache) for the same reason item 9 does.
 
----
-
-### 10. Surface figures and data links
-
-Agents already extract figure URLs and classify them local vs. external, but the
-combined digest drops most of that. A "Data & Figures" section per digest — linked
-project repos, external data, notable figures — would make digests more useful as an
-entry point into the actual work.
 
 ---
 
@@ -166,3 +158,10 @@ never processed twice — closing the feedback loop. Draft-only by design. See
 The weekly digest now runs on a schedule rather than by hand, running `full-lab-digest`,
 committing the result to `digests/`, and opening the WordPress draft. Publishing stays
 as `draft` so the human review step is preserved.
+
+### 10. Surface figures and data links
+
+Agents already extract figure URLs and classify them local vs. external, but the
+combined digest drops most of that. A "Data & Figures" section per digest — linked
+project repos, external data, notable figures — would make digests more useful as an
+entry point into the actual work.
