@@ -14,7 +14,7 @@ with the word `AUTHORIZED` (so the line reads `AUTOMATED PUBLISHING:` followed b
 
 ## Authorization marker
 
-> AUTOMATED PUBLISHING: PAUSED
+> AUTOMATED PUBLISHING: AUTHORIZED
 
 The skill searches this file for the authorized marker — the line `AUTOMATED PUBLISHING:`
 ending in the word `AUTHORIZED`. If that exact line is present anywhere in the file, the
@@ -123,4 +123,5 @@ The skill only runs unattended if a cron job invokes it. To stop that, edit the 
    Confirm the line is gone (or now starts with `#`). With no cron job, the skill only
    runs when a person triggers it by hand, and even then this file's draft/live rail and
    the one-post-per-day cap still apply.
+
 
