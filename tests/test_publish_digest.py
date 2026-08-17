@@ -273,7 +273,7 @@ class TestReadToken(unittest.TestCase):
 
 
 class TestPostDraft(unittest.TestCase):
-    """post_draft must send the token only in a header and never echo it back."""
+    """post_digest must send the token only in a header and never echo it back."""
 
     class _FakeResponse:
         def __init__(self, status, body):
@@ -299,7 +299,7 @@ class TestPostDraft(unittest.TestCase):
             return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
 
         with patch("publish_digest.urlopen", side_effect=fake_urlopen):
-            status, payload = publish_digest.post_draft(
+            status, payload = publish_digest.post_digest(
                 "example.wordpress.com", "sekrit", "My Title", "<p>Body</p>"
             )
 
@@ -311,6 +311,32 @@ class TestPostDraft(unittest.TestCase):
         self.assertNotIn("sekrit", captured["url"])
         self.assertEqual(payload["ID"], 1)
 
+    def test_status_publish_is_sent_when_requested(self):
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
+
+        with patch("publish_digest.urlopen", side_effect=fake_urlopen):
+            publish_digest.post_digest(
+                "example.wordpress.com", "sekrit", "T", "<p>c</p>", status="publish"
+            )
+
+        self.assertEqual(captured["payload"]["status"], "publish")
+
+    def test_status_defaults_to_draft(self):
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
+
+        with patch("publish_digest.urlopen", side_effect=fake_urlopen):
+            publish_digest.post_digest("example.wordpress.com", "sekrit", "T", "<p>c</p>")
+
+        self.assertEqual(captured["payload"]["status"], "draft")
+
     def test_reflected_token_in_error_body_is_redacted(self):
         token = "super-secret-token"
         body = json.dumps(
@@ -319,7 +345,7 @@ class TestPostDraft(unittest.TestCase):
         error = HTTPError("https://api", 401, "Unauthorized", {}, io.BytesIO(body))
 
         with patch("publish_digest.urlopen", side_effect=error):
-            status, payload = publish_digest.post_draft(
+            status, payload = publish_digest.post_digest(
                 "example.wordpress.com", token, "T", "<p>c</p>"
             )
 
@@ -334,7 +360,7 @@ class TestPostDraft(unittest.TestCase):
         error = HTTPError("https://api", 500, "Server Error", {}, io.BytesIO(body))
 
         with patch("publish_digest.urlopen", side_effect=error):
-            status, payload = publish_digest.post_draft(
+            status, payload = publish_digest.post_digest(
                 "example.wordpress.com", token, "T", "<p>c</p>"
             )
 
@@ -346,7 +372,7 @@ class TestPostDraft(unittest.TestCase):
         error = HTTPError("https://api", 500, "Server Error", {}, io.BytesIO(b"x" * 5000))
 
         with patch("publish_digest.urlopen", side_effect=error):
-            _, payload = publish_digest.post_draft(
+            _, payload = publish_digest.post_digest(
                 "example.wordpress.com", "tok", "T", "<p>c</p>"
             )
 

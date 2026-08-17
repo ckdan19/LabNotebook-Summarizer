@@ -443,3 +443,4 @@ webfetch-test.txt
 
 # Cached API responses (e.g. literature-connector PubMed / Europe PMC results) — never commit
 .cache/
+daily-lit-cron-log.txt
