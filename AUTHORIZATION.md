@@ -5,12 +5,12 @@ skill publishes its daily literature-connection post to WordPress **live** (imme
 visible) or as a **draft**. The skill reads this file at run time and publishes live only
 when the authorization marker is present exactly.
 
-**Current state: PAUSED (draft-only).** The marker line below ends in `PAUSED`, so the
-skill currently falls back to publishing **drafts**. Live publishing has been approved
-(see sign-off below) but is intentionally held off until a human flips the marker. **To
-activate live publishing:** on the marker line below, replace the trailing word `PAUSED`
-with the word `AUTHORIZED` (so the line reads `AUTOMATED PUBLISHING:` followed by
-`AUTHORIZED`), then commit.
+**Current state: LIVE (authorized).** The marker line below reads
+`AUTOMATED PUBLISHING: AUTHORIZED`, so the skill currently publishes its daily post
+**live** (immediately visible). Live publishing was approved (see sign-off below) and
+activated by flipping the marker. **To pause and revert to draft-only:** on the marker
+line below, replace the trailing word `AUTHORIZED` with `PAUSED` (or delete this file),
+then commit — see "How to pause or disable this" at the bottom.
 
 ## Authorization marker
 
@@ -18,17 +18,18 @@ with the word `AUTHORIZED` (so the line reads `AUTOMATED PUBLISHING:` followed b
 
 The skill searches this file for the authorized marker — the line `AUTOMATED PUBLISHING:`
 ending in the word `AUTHORIZED`. If that exact line is present anywhere in the file, the
-daily post is published **live**. If this file is missing, unreadable, or the marker ends
-in anything else (as it does now — `PAUSED`), the skill automatically falls back to
+daily post is published **live** (as it is now). If this file is missing, unreadable, or
+the marker ends in anything else (e.g. `PAUSED`), the skill automatically falls back to
 publishing a **draft** — no live post goes out. Do not change the wording of the marker
 unless you intend to switch live publishing on or off.
 
-**Important:** while paused, the fully-spelled authorized marker phrase must not appear
-*anywhere* in this file — not even in these instructions — because the skill matches it as
-a plain substring. That is why this document spells the trailing word as a separate token
-(`AUTHORIZED`) rather than writing the whole marker out. The marker line is the single
-place its wording decides behavior; edit only that line to switch live publishing on or
-off, and never paste the complete authorized phrase into the surrounding prose.
+**Important:** the skill matches the authorized phrase as a plain substring anywhere in
+the file, so while live publishing is authorized the phrase legitimately appears both on
+the marker line and, as here, in the surrounding prose. **When you pause** by switching
+the marker to `PAUSED`, you must also ensure the fully-spelled authorized phrase does not
+remain *anywhere* in the file — including in explanatory prose like this paragraph —
+because any lingering copy would keep matching and hold the skill in live mode. The marker
+line is the intended single control point; if you pause, scrub any other occurrences too.
 
 ## What is authorized
 

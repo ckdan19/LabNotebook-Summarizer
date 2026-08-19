@@ -1,6 +1,14 @@
 {
-  "last_run_date": "2026-08-10",
+  "last_run_date": "2026-08-18",
   "connected_urls": [
-    "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/"
+    "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
+    "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/"
+  ],
+  "publish_log": [
+    {
+      "date": "2026-08-18",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/08/18/daily-literature-connections-2026-08-18/"
+    }
   ]
 }
