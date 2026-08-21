@@ -1,0 +1,138 @@
+name: weekly-lab-digest
+
+on:
+  schedule:
+    # 15:00 UTC Mondays = 08:00 America/Los_Angeles during PDT, 07:00 during PST.
+    # GitHub cron is UTC-only and has no DST, so this drifts an hour in winter.
+    # Scheduled runs can also be delayed or skipped under load — see the digest
+    # step's note on why that is safe here.
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Window length in days"
+        required: false
+        default: "7"
+
+permissions:
+  contents: write
+
+# Never let two digest runs overlap: both would write digests/.digest-state.json
+# from the same base commit and the second push would clobber the first.
+concurrency:
+  group: weekly-lab-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Verify API key is configured
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set. Add it under" \
+                 "Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------------
+      # Post archive (.cache/archive.db) — optional, and non-fatal.
+      # Step 8 of the full-lab-digest skill ("Historical Connections") reads
+      # this database read-only and silently skips the whole subsection if it
+      # is absent. .cache/ is gitignored, so without a cache every CI run
+      # would produce a digest missing that section. The build is incremental
+      # and resumable, so a partial or timed-out refresh just resumes next week.
+      # Delete these two steps if you would rather skip Historical Connections.
+      # ---------------------------------------------------------------------
+      - name: Restore post archive
+        uses: actions/cache@v4
+        with:
+          path: .cache/archive.db
+          key: archive-db-${{ github.run_id }}
+          restore-keys: archive-db-
+
+      - name: Refresh post archive (incremental)
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          # Safe to pass here: this step runs plain Python, not Claude.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/build_archive.py
+
+      # ---------------------------------------------------------------------
+      # Generate the digest.
+      #
+      # This step deliberately receives NO GitHub token. It reads third-party
+      # notebook posts — untrusted content — so it must not hold a credential
+      # that can write to this repo. The five-source fetch uses roughly 10 of
+      # the 60 unauthenticated GitHub API calls per hour, which is enough.
+      # Committing happens in a separate step below, in plain shell.
+      # ---------------------------------------------------------------------
+      - name: Generate full lab digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DAYS: ${{ inputs.days || '7' }}
+        run: |
+          set -o pipefail
+          # Built up in pieces so every line stays indented inside this block.
+          ALLOWED="Task,Agent,Skill,Read,Write,Edit,Glob,Grep"
+          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_github_notebook.py:*)"
+          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
+          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # Broad on purpose: literature-connector shells out to curl for
+          # PubMed and Europe PMC and the URLs are built at run time. This step
+          # holds no credentials, which is what keeps the rule acceptable.
+          ALLOWED="$ALLOWED,Bash(curl:*)"
+
+          claude -p "Run the full-lab-digest skill for the last ${DAYS} days." \
+            --permission-mode acceptEdits \
+            --max-turns 200 \
+            --output-format text \
+            --allowedTools "$ALLOWED" \
+            2>&1 | tee "$RUNNER_TEMP/digest-run.log"
+
+      - name: Confirm a digest was produced
+        run: |
+          git add -A digests/
+          if git diff --cached --quiet; then
+            echo "::error::The run produced no change under digests/." \
+                 "Check the digest-run-log artifact — a fetch may have failed," \
+                 "or every post in the window was already covered."
+            exit 1
+          fi
+          git diff --cached --name-only
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add weekly lab digest ($(date -u +%Y-%m-%d), ${DAYS:-7}d window)"
+          # Rebase before pushing so a human commit landing mid-run is not lost.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+        env:
+          DAYS: ${{ inputs.days || '7' }}
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-run-log
+          path: ${{ runner.temp }}/digest-run.log
+          if-no-files-found: warn
