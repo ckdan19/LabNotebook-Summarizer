@@ -172,6 +172,34 @@ class TestDerivePermalink(unittest.TestCase):
             "https://robertslab.github.io/sams-notebook/posts/2026/2026-07-30-Glycogen-Assay/",
         )
 
+    def test_megan_nested_qmd_becomes_html(self):
+        # Megan's Quarto site has no fixed folder convention; a dated-month
+        # folder holds a named .qmd that renders to a sibling .html.
+        url = notebook_parsing.derive_permalink(
+            "megan", "posts/2026-08/fieldretrieval1.qmd"
+        )
+        self.assertEqual(
+            url,
+            "https://meganewing.github.io/mewing-notebook/posts/2026-08/fieldretrieval1.html",
+        )
+
+    def test_megan_projects_folder_qmd_becomes_html(self):
+        # A different subfolder (projects/) resolves the same way.
+        url = notebook_parsing.derive_permalink(
+            "megan", "posts/projects/clamtrials.qmd"
+        )
+        self.assertEqual(
+            url,
+            "https://meganewing.github.io/mewing-notebook/posts/projects/clamtrials.html",
+        )
+
+    def test_megan_index_qmd_becomes_folder(self):
+        # An index.qmd renders to its folder, not a .html file.
+        url = notebook_parsing.derive_permalink("megan", "posts/welcome/index.qmd")
+        self.assertEqual(
+            url, "https://meganewing.github.io/mewing-notebook/posts/welcome/"
+        )
+
     def test_leading_slash_in_path_tolerated(self):
         url = notebook_parsing.derive_permalink(
             "ariana", "/posts/2026-07-01-goals.qmd"

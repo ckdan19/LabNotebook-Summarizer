@@ -166,7 +166,7 @@ def _strip_index(path: str) -> str:
 def derive_permalink(source: str, file_path: str) -> str:
     """Map a repo file path to its published URL for the given notebook source.
 
-    Each of the four GitHub-hosted notebooks publishes under its own scheme:
+    Each of the five GitHub-hosted notebooks publishes under its own scheme:
 
     - tumbling-oysters: `posts/N-slug/index.qmd`
       -> https://sr320.github.io/tumbling-oysters/posts/N-slug/
@@ -176,6 +176,12 @@ def derive_permalink(source: str, file_path: str) -> str:
       -> https://grace-ac.github.io/slug/   (Jekyll drops the date prefix)
     - sams: `posts/year/date-slug/index.qmd`
       -> https://robertslab.github.io/sams-notebook/posts/year/date-slug/
+    - megan: Quarto site with no fixed folder convention — posts sit at varying
+      depths and folder names (`posts/2026-08/slug.qmd`, `posts/projects/slug.qmd`,
+      `posts/welcome/index.qmd`). Quarto's rule is uniform regardless: an
+      `index.qmd` renders to its folder, any other `.qmd` to a sibling `.html`.
+      -> https://meganewing.github.io/mewing-notebook/posts/2026-08/slug.html
+      -> https://meganewing.github.io/mewing-notebook/posts/welcome/
     """
     path = file_path.lstrip("/")
 
@@ -187,6 +193,13 @@ def derive_permalink(source: str, file_path: str) -> str:
         if path.endswith(".qmd"):
             path = path[: -len(".qmd")] + ".html"
         return "https://ahuffmyer.github.io/" + path
+    if source == "megan":
+        # index.qmd -> folder/, any other .qmd -> sibling .html. Handling both in
+        # one branch absorbs this notebook's folder-naming variability.
+        path = _strip_index(path)
+        if path.endswith(".qmd"):
+            path = path[: -len(".qmd")] + ".html"
+        return "https://meganewing.github.io/mewing-notebook/" + path
     if source == "grace":
         slug = os.path.basename(path)
         if slug.endswith(".md"):

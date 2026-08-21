@@ -64,6 +64,15 @@ NOTEBOOKS = {
         # file was actually committed, so it needs per-file commit history.
         "file_dates": True,
     },
+    "megan": {
+        "repo": "meganewing/mewing-notebook",
+        "prefix": "posts/",
+        # Quarto site with no per-post folder convention: posts are flat `.qmd`
+        # files at varying depths (`posts/2026-08/slug.qmd`,
+        # `posts/projects/slug.qmd`) plus a few `index.qmd` folders, so match
+        # `.qmd` broadly rather than pinning to `/index.qmd` like sams.
+        "suffix": ".qmd",
+    },
 }
 
 
