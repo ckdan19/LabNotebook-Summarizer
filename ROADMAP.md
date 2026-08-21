@@ -139,7 +139,7 @@ Shares items 1–4 of item 9's pipeline; the two should be built as one daily ru
 choice of output surface rather than twice. Depends on item 4 (state) and wants item 5
 (cache) for the same reason item 9 does.
 
-### 13. Configurable notebook registry
+### 14. Configurable notebook registry
 
 `NOTEBOOKS` in [fetch_github_notebook.py](scripts/fetch_github_notebook.py) hardcodes the
 repo, path prefix/suffix, and permalink scheme for all four GitHub-hosted notebooks, and
@@ -153,7 +153,7 @@ read its notebook's config by name instead of one bespoke `.claude/agents/*.md` 
 source — collapsing the "one agent per notebook" pattern item 2 already deduplicated at the
 prompt level down to one agent parameterized by config.
 
-### 14. Flag notebooks that have gone quiet
+### 15. Flag notebooks that have gone quiet
 
 Every weekly digest reports a source with zero posts in the window as "no activity" (README,
 "What to expect") — accurate, but silent about *how long* it's been quiet. A source that
@@ -164,7 +164,7 @@ recent post date per source vs. today — could turn "no activity" into "no acti
 days). Useful signal for a PI skimming digests: a notebook gone quiet for a month is a
 different situation than one that just had an off week.
 
-### 15. Read-only search over the archive without Claude Code
+### 16. Read-only search over the archive without Claude Code
 
 `lab-archive` (item 11) answers "has anyone done this before" questions against
 `.cache/archive.db`'s FTS5 index, but only for someone with Claude Code open in this
@@ -174,7 +174,7 @@ prints ranked hits with source/author/date/URL — would make the archive usable
 terminal, and could double as the base for a tiny static HTML page (SQLite FTS5 output is
 just rows) if browser-based search across the whole lab's history turns out to be wanted.
 
-### 16. Attach narration to the weekly publish automatically
+### 17. Attach narration to the weekly publish automatically
 
 `digest-audio` and `digest-audio-publish` exist and work — `scripts/upload_media.py` was added
 alongside the publish skill recently — but narrating and uploading audio for a digest is
@@ -186,7 +186,7 @@ invocation. Keep it opt-in and best-effort (same lesson item 3 already learned f
 Drive-upload step): a TTS/upload failure should not block the digest itself from being
 written or published.
 
-### 17. Surface literature "Conflicts" as a standout
+### 18. Surface literature "Conflicts" as a standout
 
 `literature-connector` already tags each paper's relationship to a lab finding as *Supports*,
 *Conflicts*, *Adds context*, or *Suggests next step*, but every tag is rendered the same way —
