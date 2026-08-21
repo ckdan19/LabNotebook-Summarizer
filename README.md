@@ -4,7 +4,7 @@ A tool that summarizes lab notebook posts from [Roberts Lab](https://robertslab.
 
 ## Overview
 
-LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes, and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a Python data-fetching script.
+LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes, and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a small set of Python helper scripts. It also keeps a searchable local archive of every post the five notebooks have ever published, can narrate a digest to audio, and can publish to WordPress.
 
 ## For Claude Desktop / GUI Users
 
@@ -16,7 +16,8 @@ You do not need to run any Python yourself. The skills and subagents in this rep
 2. Clone this repository: `git clone https://github.com/ckdan19/LabNotebook-Summarizer.git`
 3. In Claude, open a Claude Code session **with this repository as the working directory**. The skills in `.claude/skills/` and subagents in `.claude/agents/` load automatically from the project folder — if you open a different folder, none of the requests below will work.
 4. *(Optional but recommended)* Set `GITHUB_TOKEN` in your environment to raise the GitHub API rate limit. Without it, one full digest run uses about 10 of your 60 hourly calls.
-5. *(Only if you want to publish)* Save a WordPress.com API token to `~/.config/LabNotebook-Summarizer/wp_token` with `chmod 600`.
+5. *(Only if you want to publish)* Save a WordPress.com API token to `~/.config/LabNotebook-Summarizer/wp_token` with `chmod 600`. The same token is used for publishing posts and for uploading digest audio.
+6. *(Only if you want the archive search)* Build the local post archive once with `python3 scripts/build_archive.py` (see [Scripts](#scriptsbuild_archivepy)).
 
 Then just type a request in the chat box.
 
@@ -54,17 +55,37 @@ Then just type a request in the chat box.
 
 This one needs two things from you: the **topic** to search, and the **specific finding** to compare against. If you leave out the finding, Claude will ask for it — it can't categorize papers without something to categorize them against.
 
-**Publish a digest to WordPress** — always creates a **draft**, never a live post, so you review before it goes public.
+**Publish a digest to WordPress** — the `wordpress-publisher` skill creates a **draft**, so you review before it goes public.
 
 > "Publish this week's digest to WordPress"
 >
 > "Post the July 21 digest as a WordPress draft"
 
-**Ask about past digests** — everything generated is kept in `digests/`.
+**Run the daily literature post** — a narrow daily counterpart to the full digest. It takes only the last day's posts that describe a real scientific finding, runs the literature connector on each, and assembles them into one post. **This one can publish live**, but only while [`AUTHORIZATION.md`](AUTHORIZATION.md) carries the authorization marker; otherwise it falls back to a draft. See [Automated publishing](#automated-publishing) before running it.
+
+> "Run today's literature connections"
+>
+> "Do the daily lit post"
+
+**Search the whole lab archive** — not just the digests, but every post the five notebooks have ever published, full-text. Answers come grouped by researcher with a source link for every claim.
+
+> "Has anyone in the lab done DNA methylation analysis on oysters?"
+>
+> "What do we know about resazurin assays?"
+
+The archive lives in a local SQLite database that you build (and periodically refresh) with `python3 scripts/build_archive.py`. If it hasn't been built, the skill tells you rather than searching nothing.
+
+**Ask about past digests** — everything generated is kept in `digests/`, indexed in [`digests/README.md`](digests/README.md).
 
 > "What did we cover in last week's digest?"
 >
 > "Has anyone mentioned GlycogenGlo assays in the past month of digests?"
+>
+> "Update the digest index"
+
+**Narrate and publish digest audio** — generates two spoken editions of the latest full digest (summaries-only and with-analysis), uploads them to the WordPress media library, and publishes a **new, separate** post linking to both. It does not touch the original digest post.
+
+> "Publish audio for the latest digest"
 
 ### What to expect
 
@@ -74,30 +95,40 @@ This one needs two things from you: the **topic** to search, and the **specific 
 - A source with no posts that week is reported as "no activity" rather than silently dropped.
 - Small edits to a post — a fixed typo or link, six diff lines or fewer — are flagged as cosmetic and are not written up as new science.
 - If a notebook fetch fails (rate limit, network), Claude will tell you which source failed instead of quietly returning a partial digest.
+- Most publishing paths produce a draft. The two exceptions that go live are called out explicitly in [Automated publishing](#automated-publishing).
 
 ## Repository Structure
 
 ```
 LabNotebook-Summarizer/
 ├── .claude/
-│   ├── skills/              # full-lab-digest, weekly-lab-digest, literature-connector,
-│   │                        #   wordpress-publisher, digest-audio
+│   ├── skills/              # full-lab-digest, weekly-lab-digest, daily-literature-post,
+│   │                        #   literature-connector, lab-archive, digest-index,
+│   │                        #   wordpress-publisher, digest-audio, digest-audio-publish
 │   ├── agents/              # One subagent per notebook source (five total)
 │   └── shared/
 │       └── notebook-digest-format.md  # Output contract shared by the four GitHub agents
 ├── scripts/
 │   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
-│   └── publish_digest.py    # Converts a digest to sanitized HTML and posts it as a WP draft
+│   ├── notebook_parsing.py  # Shared post parsing/classification used by the two fetchers above
+│   ├── build_archive.py     # Builds the full-history SQLite archive at .cache/archive.db
+│   ├── publish_digest.py    # Converts a digest to sanitized HTML and posts it to WordPress
+│   └── upload_media.py      # Uploads a local file (digest audio) to the WP media library
 ├── text_to_speech/          # Optional, isolated Kokoro / Chatterbox-Nano digest narration
 ├── tests/                   # Stdlib unittest suite for the scripts and the audio layer
 ├── digests/                 # Generated digest files (Markdown)
-│   └── .digest-state.json   # URLs already covered, so no post is digested twice
+│   ├── README.md            # Auto-generated index of every digest (digest-index skill)
+│   ├── .digest-state.json   # URLs already covered, so no post is digested twice
+│   └── .literature-state.json  # URLs already connected + the daily-post publish log
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
 │   └── skill-literature-connector.md
+├── AUTHORIZATION.md         # The switch that allows the daily literature post to publish live
 ├── ROADMAP.md               # Planned improvements, roughly in priority order
 └── README.md
+
+.cache/archive.db            # Full-history post archive (git-ignored; built on demand)
 ```
 
 ## Data Sources
@@ -165,24 +196,52 @@ Output is JSON written to stdout:
 
 `warnings` lists non-fatal problems — a post skipped for an unreadable date, or a window that hit `--max-pages` before reaching the cutoff. On a network or API failure the script prints `{"error": "..."}` to stdout and exits 1.
 
+### `scripts/notebook_parsing.py`
+
+Not a command-line tool — a pure helper module (no network, no globals) holding the post-parsing rules shared by `fetch_github_notebook.py` and `build_archive.py`: the cosmetic/substantive classification, the middle-out body clipping, front-matter parsing, and permalink derivation. Both the live fetcher and the archive builder go through it so a post is classified and trimmed identically either way.
+
+### `scripts/build_archive.py`
+
+Walks each source's **entire** history — not the 7-day window the live fetchers use — into a local SQLite database at `.cache/archive.db` with an FTS5 full-text index, so the `lab-archive` skill can search everything the labs have ever published. The database is git-ignored; each clone builds its own.
+
+```bash
+python3 scripts/build_archive.py                          # all five sources
+python3 scripts/build_archive.py --sources sams grace     # a subset
+```
+
+The build is **incremental and resumable**. For the four GitHub notebooks it lists a repo's whole posts tree in a single git-tree call and compares each file's blob SHA against what is already stored, so unchanged posts are skipped without re-fetching. Every processed post is committed as it goes, so an interrupted run — a dropped connection, an exhausted rate limit — simply resumes on the next invocation. The WordPress notebook has no blob SHA, so it is deduplicated by URL instead. Re-run it whenever you want the archive current.
+
+Options: `--sources` (default: all five — `tumbling-oysters`, `grace`, `ariana`, `sams`, `wordpress`). A first full build makes a lot of GitHub API calls; set `GITHUB_TOKEN` before running it.
+
 ### `scripts/publish_digest.py`
 
-Converts a Markdown digest to sanitized HTML and posts it to WordPress.com as a **draft**. Used by the `wordpress-publisher` skill.
+Converts a Markdown digest to sanitized HTML and posts it to WordPress.com. Used by the `wordpress-publisher`, `daily-literature-post`, and `digest-audio-publish` skills.
 
 ```bash
 python3 scripts/publish_digest.py digests/full-lab-digest-2026-07-21.md --dry-run
 ```
 
-The first line of the digest must be a `# ` heading; it becomes the post title and is dropped from the body. `--dry-run` converts and sanitizes without reading the token or contacting the API. Options: `--site`, `--token-file` (default `~/.config/LabNotebook-Summarizer/wp_token`).
+The first line of the digest must be a `# ` heading; it becomes the post title and is dropped from the body. `--dry-run` converts and sanitizes without reading the token or contacting the API. Options: `--site`, `--token-file` (default `~/.config/LabNotebook-Summarizer/wp_token`), `--category NAME` (repeatable; created if it does not exist), `--status {draft,publish}`.
 
 Handling notes:
 
 - The token is read by the script and sent only as an `Authorization` header — never in argv (visible via `ps`), never printed, and redacted from any API response it reports.
 - Digest content is never passed through a shell; only the file path is a command-line argument. Digests summarize third-party posts, so a title containing `$(...)` must not be interpolatable.
 - The HTML body is filtered against a tag allowlist before sending: `<script>`, `<style>`, `<iframe>`, inline event handlers, and non-`http(s)`/`mailto` URLs are dropped.
-- Status is hardcoded to `draft`.
+- **Status defaults to `draft` for every caller.** Publishing live requires an explicit `--status publish`, which only the `daily-literature-post` and `digest-audio-publish` skills pass — see [Automated publishing](#automated-publishing).
+- The script always POSTs to `posts/new/`, so it creates a new post and never edits an existing one.
 
 Requires `python-markdown` (`pip install markdown`) or `pandoc`. Neither is a stdlib module, and the script reports a clear error if both are absent.
+
+### `scripts/upload_media.py`
+
+Uploads a local file to the WordPress.com media library and returns its URL. Used by the `digest-audio-publish` skill to host digest narration WAVs before publishing the post that links to them.
+
+```bash
+python3 scripts/upload_media.py text_to_speech/output/digest-summaries.wav --dry-run
+```
+
+Takes a file **path** only — the bytes are sent as a multipart `media[]` field, never interpolated into a shell command. Token handling mirrors `publish_digest.py`: read from disk by this process, passed only in a request header, never in argv or output. Options: `--site`, `--token-file`, `--title`, `--dry-run` (validates the file and reports what would be uploaded without reading the token or contacting the API).
 
 ### Digest audio (`text_to_speech/`)
 
@@ -211,9 +270,13 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 |---|---|
 | `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis and literature connections |
 | `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
+| `daily-literature-post` | Narrow daily counterpart to `full-lab-digest`: keeps only the last day's posts that describe a real scientific finding, runs `literature-connector` on each, and publishes one combined post. Publishes **live** only when authorized (see below); draft otherwise |
 | `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
+| `lab-archive` | Answers "has anyone done X before" by full-text-searching `.cache/archive.db` — every post the five notebooks have ever published — and reports grouped by researcher with a source link per claim. Read-only; it never builds the database |
+| `digest-index` | Regenerates `digests/README.md` from scratch as a newest-first index of every digest |
 | `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
 | `digest-audio` | Generates an audio version of a completed digest with Kokoro or Chatterbox-Nano |
+| `digest-audio-publish` | End-to-end: narrates the latest full digest in two editions, uploads the WAVs to the WP media library, and publishes a **new, separate** live post linking to them and back to the digest |
 
 Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all five.
 
@@ -225,16 +288,30 @@ Every source defaults to a 7-day window, and every source accepts a different on
 
 The same applies to a single notebook ("what's new in Sam's notebook over the past month"). Under the hood this becomes `--days N` on `fetch_github_notebook.py` or `fetch_lab_posts.py`. The window is also encoded in the digest filename (`full-lab-digest-2026-07-27-14d.md`), so a 14-day digest does not overwrite the 7-day one that ends on the same date.
 
+## Automated publishing
+
+Most paths in this repo create WordPress **drafts**. Two publish live, and both are deliberately explicit:
+
+- **`daily-literature-post`** publishes live *only* while [`AUTHORIZATION.md`](AUTHORIZATION.md) exists at the repository root and contains the marker line `AUTOMATED PUBLISHING: AUTHORIZED`. If the file is missing, unreadable, or the marker is changed (e.g. to `PAUSED`), the skill falls back to a draft and says so in its report. A second rail caps it at **one post per calendar day**, live or draft, recorded in `digests/.literature-state.json` under `publish_log`, so a double trigger cannot produce duplicates. Live posts are tagged with the `auto-literature-connections` category, which also excludes them from future daily runs.
+- **`digest-audio-publish`** publishes its audio post live after showing you the resolved title and a content preview from a `--dry-run` first.
+
+To pause live publishing without touching any code, change `AUTHORIZED` to `PAUSED` on the marker line in `AUTHORIZATION.md` (and scrub any other copy of the phrase from the file — the skill matches it as a plain substring), or delete the file, then commit. `AUTHORIZATION.md` also records who signed off and documents how to disable the cron automation entirely.
+
+Nothing in `AUTHORIZATION.md` affects `full-lab-digest`, `weekly-lab-digest`, or `wordpress-publisher` — those remain draft-only.
+
 ## Digests
 
-Generated digests are saved to the `digests/` directory as Markdown files, named by date range. Digest types include:
+Generated digests are saved to the `digests/` directory as Markdown files, named by date range, and indexed in [`digests/README.md`](digests/README.md) — a newest-first table regenerated from scratch by the `digest-index` skill. Digest types include:
 
 - **`2026-06-30.md`, `2026-07-07.md`** — WordPress-only weekly digests, grouped by author
 - **`tumbling-oysters-YYYY-MM-DD.md`** — Focused digests for Steven Roberts' Tumbling Oysters notebook
+- **`daily-literature-YYYY-MM-DD.md`** — Daily literature-connection posts from `daily-literature-post`: only the day's genuine findings, each paired with recent papers
 - **`full-lab-digest-YYYY-MM-DD-Nd.md`** — Full multi-source digests, named by end date and window length (`-7d` by default). Files predating this convention omit the `-Nd` suffix. Each includes:
   - Per-notebook summaries (all five sources)
   - Cross-notebook pattern detection (shared species, assays, and themes)
   - Literature connections via PubMed and bioRxiv
+
+Two state files sit alongside them and are committed so de-duplication holds across machines: `.digest-state.json` (post URLs already digested) and `.literature-state.json` (post URLs already connected to literature, plus the daily post's publish log).
 
 ### Example cross-notebook connection (from `full-lab-digest-2026-07-21.md`)
 
@@ -254,22 +331,27 @@ To run a single module:
 python3 -m unittest tests.test_publish_digest
 ```
 
-The suite covers the parsing and safety logic in all three scripts: HTML stripping,
-date parsing and paging in `fetch_lab_posts.py`; the sanitizer allowlist, token
-handling, and token redaction in `publish_digest.py`; and the cosmetic/substantive
-boundary, compare-range construction, and post clipping in `fetch_github_notebook.py`.
-The optional audio layer is covered too, but its provider tests stub out Kokoro and
-Chatterbox rather than loading the real models.
+The suite covers the parsing and safety logic in the scripts: HTML stripping, date
+parsing and paging in `fetch_lab_posts.py`; the sanitizer allowlist, token handling,
+and token redaction in `publish_digest.py`; the cosmetic/substantive boundary,
+compare-range construction, and post clipping in `fetch_github_notebook.py`; and the
+shared classification and clipping helpers in `notebook_parsing.py`. The optional
+audio layer is covered too, but its provider tests stub out Kokoro and Chatterbox
+rather than loading the real models.
+
+`build_archive.py` and `upload_media.py` have no test module yet — see
+[`ROADMAP.md`](ROADMAP.md).
 
 ## Requirements
 
-- Python 3.8+ — stdlib only for `fetch_lab_posts.py` and `fetch_github_notebook.py`
+- Python 3.8+ — stdlib only for `fetch_lab_posts.py`, `fetch_github_notebook.py`, `notebook_parsing.py`, `build_archive.py` (SQLite with FTS5, which CPython bundles), and `upload_media.py`
 - Python 3.10+ (3.11 recommended) — only for the optional Kokoro/Chatterbox-Nano audio layer
 - `python-markdown` (`pip install markdown`) or `pandoc` — only for `publish_digest.py`
-- `GITHUB_TOKEN` or `GH_TOKEN` in the environment — optional, but raises the GitHub API rate limit from 60 to 5,000 requests/hour. The `gh` CLI is **not** required.
+- `GITHUB_TOKEN` or `GH_TOKEN` in the environment — optional for the 7-day fetchers, but strongly recommended for `build_archive.py`, since it raises the GitHub API rate limit from 60 to 5,000 requests/hour. The `gh` CLI is **not** required.
 - Claude Code (for running skills)
 - Internet access to the WordPress REST API and GitHub
-- A WordPress.com API token at `~/.config/LabNotebook-Summarizer/wp_token` (mode 600) — only for publishing
+- A WordPress.com API token at `~/.config/LabNotebook-Summarizer/wp_token` (mode 600) — only for publishing posts and uploading digest audio
+- There is no `sqlite3` CLI requirement; the archive is queried through Python's built-in `sqlite3` module
 
 ## Related
 
