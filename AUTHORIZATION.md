@@ -16,20 +16,19 @@ then commit — see "How to pause or disable this" at the bottom.
 
 > AUTOMATED PUBLISHING: AUTHORIZED
 
-The skill searches this file for the authorized marker — the line `AUTOMATED PUBLISHING:`
-ending in the word `AUTHORIZED`. If that exact line is present anywhere in the file, the
-daily post is published **live** (as it is now). If this file is missing, unreadable, or
-the marker ends in anything else (e.g. `PAUSED`), the skill automatically falls back to
-publishing a **draft** — no live post goes out. Do not change the wording of the marker
-unless you intend to switch live publishing on or off.
+The skill checks this file for one specific **standalone line**: `> AUTOMATED PUBLISHING: AUTHORIZED`,
+stripped of leading/trailing whitespace, matched exactly — not a substring search over the
+whole file. Only the blockquote line directly above counts. If that exact line is present,
+the daily post is published **live** (as it is now). If this file is missing, unreadable,
+or no line matches exactly (e.g. the line reads `PAUSED`, or the phrase appears only inside
+a sentence elsewhere in this file), the skill automatically falls back to publishing a
+**draft** — no live post goes out. Do not change the wording of the marker line unless you
+intend to switch live publishing on or off.
 
-**Important:** the skill matches the authorized phrase as a plain substring anywhere in
-the file, so while live publishing is authorized the phrase legitimately appears both on
-the marker line and, as here, in the surrounding prose. **When you pause** by switching
-the marker to `PAUSED`, you must also ensure the fully-spelled authorized phrase does not
-remain *anywhere* in the file — including in explanatory prose like this paragraph —
-because any lingering copy would keep matching and hold the skill in live mode. The marker
-line is the intended single control point; if you pause, scrub any other occurrences too.
+**Note:** because the match requires an exact standalone line, the phrase appearing in
+explanatory prose elsewhere in this document (as it does throughout, for readability) does
+**not** re-arm live publishing and does **not** need to be scrubbed when pausing. The marker
+line above is the single control point — editing only that line is sufficient.
 
 ## What is authorized
 

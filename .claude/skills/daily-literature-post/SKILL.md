@@ -10,7 +10,7 @@ This is a narrow daily counterpart to `full-lab-digest`: it does not summarize t
 
 **Live publishing is authorization-gated; draft is the safe default.** This skill publishes **live only when a durable authorization file is present**; otherwise it falls back to a draft. Two independent rails protect this (both enforced in step 7):
 
-1. **Authorization file.** Live publishing requires `AUTHORIZATION.md` at the repository root containing the exact marker `AUTOMATED PUBLISHING: AUTHORIZED`. If the file is missing, unreadable, or lacks that marker, the skill publishes a **draft** and says so in its report. There is no way to publish live without this file — deleting or editing out the marker instantly reverts the skill to draft-only.
+1. **Authorization file.** Live publishing requires `AUTHORIZATION.md` at the repository root containing a standalone line reading exactly `> AUTOMATED PUBLISHING: AUTHORIZED` (see step 7b for the precise match rule — a mention of the phrase elsewhere in the file's prose does not count). If the file is missing, unreadable, or lacks that exact line, the skill publishes a **draft** and says so in its report. There is no way to publish live without this file — deleting or editing out the marker line instantly reverts the skill to draft-only.
 2. **One-post-per-day cap.** The skill publishes at most **one** post per day (live or draft). If the state file already records a publish for today, it refuses to publish again rather than posting a duplicate.
 
 Never publish live by any other route (e.g., hand-passing `--status publish` outside these rails). The rails exist so the pipeline stays safe when it runs unattended after the original author has left the lab. See `AUTHORIZATION.md` for who approved live publishing and how to pause or disable it.
@@ -137,8 +137,8 @@ If the count is 0, continue.
 Decide the publish status by inspecting `AUTHORIZATION.md` at the repository root:
 
 - Read the file at `AUTHORIZATION.md` (repo root).
-- **Publish live** (`--status publish`) **only if** the file exists, is readable, and its text contains the exact marker `AUTOMATED PUBLISHING: AUTHORIZED`.
-- **Otherwise fall back to draft** (`--status draft`): if the file is missing, cannot be read, or does not contain that exact marker. Do not attempt to "fix" or interpret a near-miss marker — anything other than an exact match means draft.
+- **Publish live** (`--status publish`) **only if** the file exists, is readable, and at least one line — stripped of leading/trailing whitespace — is **exactly** `> AUTOMATED PUBLISHING: AUTHORIZED` (the blockquote marker line under "Authorization marker"). A match anywhere else in the file — inline in a sentence, inside a code span, in explanatory prose — does **not** count, even if the characters are identical. This is deliberately stricter than a substring search: prose elsewhere in the file (including this very instruction) legitimately contains the phrase, and a substring match would treat that prose as authorization.
+- **Otherwise fall back to draft** (`--status draft`): if the file is missing, cannot be read, or no line matches exactly. Do not attempt to "fix" or interpret a near-miss marker — anything other than that exact standalone line means draft.
 
 Remember which mode you chose; you must report it in step 9.
 
