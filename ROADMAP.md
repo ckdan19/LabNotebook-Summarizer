@@ -59,6 +59,63 @@ Shares items 1–4 of item 9's pipeline; the two should be built as one daily ru
 choice of output surface rather than twice. Depends on item 4 (state) and wants item 5
 (cache) for the same reason item 9 does.
 
+### 13. Configurable notebook registry
+
+`NOTEBOOKS` in [fetch_github_notebook.py](scripts/fetch_github_notebook.py) hardcodes the
+repo, path prefix/suffix, and permalink scheme for all four GitHub-hosted notebooks, and
+`derive_permalink` in [notebook_parsing.py](scripts/notebook_parsing.py) hardcodes a matching
+`if source == ...` branch per notebook. Onboarding a new lab member's notebook — or a new
+lab entirely — currently means editing both files, adding a fifth subagent modeled on the
+existing four, and touching `DEFAULT_AUTHORS` in `build_archive.py`. Moving the per-notebook
+config into a small YAML/JSON file (repo, prefix, suffix, permalink template, default author)
+would let a new source be added by data, not code, and would let a generic subagent template
+read its notebook's config by name instead of one bespoke `.claude/agents/*.md` file per
+source — collapsing the "one agent per notebook" pattern item 2 already deduplicated at the
+prompt level down to one agent parameterized by config.
+
+### 14. Flag notebooks that have gone quiet
+
+Every weekly digest reports a source with zero posts in the window as "no activity" (README,
+"What to expect") — accurate, but silent about *how long* it's been quiet. A source that
+misses three weeks in a row looks the same as one that missed one. Since `scripts/build_archive.py`
+already stores every post's `date` per source in `.cache/archive.db`, a cheap check — most
+recent post date per source vs. today — could turn "no activity" into "no activity (last post:
+6 weeks ago)" in the digest header, or into a dedicated callout past some threshold (e.g. 21
+days). Useful signal for a PI skimming digests: a notebook gone quiet for a month is a
+different situation than one that just had an off week.
+
+### 15. Read-only search over the archive without Claude Code
+
+`lab-archive` (item 11) answers "has anyone done this before" questions against
+`.cache/archive.db`'s FTS5 index, but only for someone with Claude Code open in this
+repository. Lab members who just want to grep old notebook entries have no way in. A small
+`scripts/search_archive.py` — takes a query, runs the same FTS5 `MATCH` the skill uses,
+prints ranked hits with source/author/date/URL — would make the archive usable from a plain
+terminal, and could double as the base for a tiny static HTML page (SQLite FTS5 output is
+just rows) if browser-based search across the whole lab's history turns out to be wanted.
+
+### 16. Attach narration to the weekly publish automatically
+
+`digest-audio` and `digest-audio-publish` exist and work — `scripts/upload_media.py` was added
+alongside the publish skill recently — but narrating and uploading audio for a digest is
+currently a separate, manually triggered step after the weekly digest is written. Once this
+pattern has run manually a few times without surprises, `weekly-lab-digest`/`full-lab-digest`
+could offer the audio step inline — generate narration, upload via `scripts/upload_media.py`,
+and link the WAV from the WordPress draft — as an opt-in flag rather than a fully separate
+invocation. Keep it opt-in and best-effort (same lesson item 3 already learned from the
+Drive-upload step): a TTS/upload failure should not block the digest itself from being
+written or published.
+
+### 17. Surface literature "Conflicts" as a standout
+
+`literature-connector` already tags each paper's relationship to a lab finding as *Supports*,
+*Conflicts*, *Adds context*, or *Suggests next step*, but every tag is rendered the same way —
+one more bullet in a list. A *Conflicts* tag is the highest-value signal of the four: it means
+a lab result and a published paper disagree, which is worth a human's attention regardless of
+which digest section it happens to land in. Both `full-lab-digest` and `daily-literature-post`
+could pull any *Conflicts*-tagged connection into a short callout near the top of the digest
+(or the draft's opening paragraph) instead of leaving it to be found while reading through
+every per-notebook section in order.
 
 ---
 
