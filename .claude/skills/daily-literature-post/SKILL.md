@@ -4,7 +4,7 @@ Trigger this skill when the user asks to **run the daily literature connection p
 
 ## What this skill does
 
-Fetches the last day of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress. The post is tagged with the `auto-literature-connections` category so it is excluded from future daily runs, and every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
+Fetches the last few days of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress. The post is tagged with the `auto-literature-connections` category so it is excluded from future daily runs, and every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
 
 This is a narrow daily counterpart to `full-lab-digest`: it does not summarize the notebooks, run subagents, or search the archive — it only connects today's genuine findings to external literature.
 
@@ -46,8 +46,20 @@ This skill keeps persistent state in `digests/.literature-state.json` (path rela
 Run:
 
 ```
-python3 scripts/fetch_lab_posts.py --days 1
+python3 scripts/fetch_lab_posts.py --days 3
 ```
+
+**Why 3 days and not 1.** The window is deliberately wider than the daily cadence. When
+this skill runs unattended, a scheduled run can be delayed or skipped entirely (GitHub
+Actions cron is best-effort, and a machine running `cron` can be asleep or offline). With
+a 1-day window, a single missed run drops that day's findings **permanently** — the posts
+fall outside every subsequent window and are never connected.
+
+A wider window costs nothing because step 2's `connected_urls` check already guarantees a
+post is processed at most once, ever. Re-reading a post that was already handled yesterday
+is a no-op, so the overlap simply lets a late run catch up on what a missed run skipped.
+Do not narrow this back to `--days 1`; the de-duplication, not the window, is what
+prevents repeats.
 
 Parse the JSON `posts` array. Each post has `author`, `date`, `title`, `url`, `content`, and `categories`.
 
@@ -61,7 +73,8 @@ Read `digests/.literature-state.json` (see above). Drop any fetched post whose c
 
 Drop any remaining post that is automated pipeline output — either this skill's own prior drafts, or the `full-lab-digest` skill's published digests. These are aggregated/meta posts, not primary lab findings; connecting them would feed the pipeline its own (or a sibling pipeline's) output. Exclude a post if **any** of the following match:
 
-- **This skill's own drafts (category):** the post's `categories` list (returned by `fetch_lab_posts.py`) contains the exact name `auto-literature-connections`.
+- **This skill's own output (title):** the post's `title` begins with `Daily Literature Connections —` (case-insensitive; the em dash is what step 6's H1 template emits → WordPress title, e.g. `Daily Literature Connections — 2026-08-18`). **This is the reliable check for this skill's own output** — match on it first.
+- **This skill's own output (category):** the post's `categories` list (returned by `fetch_lab_posts.py`) contains the exact name `auto-literature-connections`. Keep this check, but do **not** rely on it alone: observed live posts published by this skill with `--category auto-literature-connections` come back from the WordPress API as `Uncategorized`, so the category does not reliably survive the publish. The title check above is what actually holds.
 - **Full Lab Digest output (title):** the post's `title` begins with `Full Lab Digest —` (case-insensitive; the em dash is what the `full-lab-digest` skill emits as its H1 → WordPress title, e.g. `Full Lab Digest — 2026-08-04 to 2026-08-10 (7 days)`). Match on the title prefix, not on content — do **not** rely on inferring "this is a digest" from the body alone.
 - **Full Lab Digest output (category):** the post's `categories` list contains `full-lab-digest`, if present. `full-lab-digest` is normally published via `wordpress-publisher` **without** a `--category`, so it typically lands as `Uncategorized` and this check will usually not fire — the title check above is the reliable one. Keep this category check anyway as belt-and-suspenders in case a digest is ever tagged.
 
@@ -99,7 +112,7 @@ Build a single Markdown document with one section per included source post. The 
 ```
 # Daily Literature Connections — [today's date]
 
-> Automated draft — each section links a finding from a lab notebook post published in the last day to recent PubMed publications and preprints. **Preprints have not been peer-reviewed.**
+> Automated draft — each section links a finding from a recent lab notebook post to recent PubMed publications and preprints. **Preprints have not been peer-reviewed.**
 
 ---
 

@@ -1,0 +1,267 @@
+name: daily-literature-post
+
+on:
+  schedule:
+    # GitHub cron is UTC-only. 16:00 UTC = 09:00 America/Los_Angeles during PDT,
+    # 08:00 during PST. Exact timing matters much less here than for the weekly
+    # job: the skill fetches a 3-day window and de-duplicates on connected_urls,
+    # so a delayed or skipped run catches up instead of losing findings.
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Two runs must never overlap. Both would read the daily cap as clear and both
+# would publish — the one failure mode that produces a duplicate LIVE post.
+concurrency:
+  group: daily-literature-post
+  cancel-in-progress: false
+
+jobs:
+  daily-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Pin the whole job to the lab's timezone so the runner, the pre-flight
+      # cap checks, the skill's notion of "today", and the WordPress site's post
+      # dates all agree. Under UTC a run near midnight Pacific would compare
+      # today's date against yesterday's posts.
+      TZ: America/Los_Angeles
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # publish_digest.py needs python-markdown (or pandoc) — the only
+      # non-stdlib dependency anywhere in the pipeline.
+      - name: Install Markdown converter
+        run: python -m pip install --quiet markdown
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Verify secrets are configured
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          missing=0
+          [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::ANTHROPIC_API_KEY is not set."; missing=1; }
+          [ -n "$WORDPRESS_TOKEN" ] || { echo "::error::WORDPRESS_TOKEN is not set."; missing=1; }
+          exit $missing
+
+      - name: Install WordPress token
+        env:
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          install -d -m 700 "$HOME/.config/LabNotebook-Summarizer"
+          umask 077
+          printf '%s' "$WORDPRESS_TOKEN" > "$HOME/.config/LabNotebook-Summarizer/wp_token"
+          chmod 600 "$HOME/.config/LabNotebook-Summarizer/wp_token"
+
+      # ---------------------------------------------------------------------
+      # Pre-flight rail A — committed state.
+      #
+      # The skill enforces its own one-post-per-day cap in step 7a, but that
+      # check is Claude reading a file. This repeats it deterministically before
+      # Claude starts, so a prompt-level failure cannot bypass it.
+      # ---------------------------------------------------------------------
+      - name: Cap check — state file
+        id: cap_state
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime, json, os, pathlib
+          today = datetime.date.today().isoformat()
+          p = pathlib.Path("digests/.literature-state.json")
+          entries = []
+          if p.exists():
+              try:
+                  entries = [e for e in json.loads(p.read_text()).get("publish_log", [])
+                             if e.get("date") == today]
+              except (ValueError, AttributeError) as exc:
+                  print(f"::warning::Could not parse {p}: {exc}", file=__import__("sys").stderr)
+          if entries:
+              e = entries[0]
+              print(f"::warning::Already published today per state file: "
+                    f"status={e.get('status')} url={e.get('url')}",
+                    file=__import__("sys").stderr)
+              print("blocked=true")
+          else:
+              print("blocked=false")
+          PY
+
+      # ---------------------------------------------------------------------
+      # Pre-flight rail B — WordPress itself.
+      #
+      # This is the rail the state file cannot provide. The state file is only
+      # durable once its commit is pushed; if a run publishes live and then the
+      # push fails, a re-run today would see a clean state file and publish a
+      # second live post. WordPress is the one source of truth that survives a
+      # failed push, so ask it directly whether today's post already exists.
+      #
+      # Only catches LIVE posts (the public API does not return drafts) — which
+      # are exactly the ones where a duplicate actually matters.
+      #
+      # Matches on the TITLE prefix, not the category. Posts this skill publishes
+      # with --category auto-literature-connections come back from the WordPress
+      # API as Uncategorized, so the category cannot be trusted here; the H1 the
+      # skill emits in step 6 is deterministic and does survive. The category is
+      # still checked as a second signal in case that is ever fixed.
+      # ---------------------------------------------------------------------
+      - name: Cap check — WordPress
+        id: cap_wp
+        if: steps.cap_state.outputs.blocked != 'true'
+        run: |
+          python3 scripts/fetch_lab_posts.py --days 3 > "$RUNNER_TEMP/posts.json" || true
+          python3 - "$RUNNER_TEMP/posts.json" <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime, json, sys
+          today = datetime.date.today().isoformat()
+          try:
+              data = json.load(open(sys.argv[1]))
+          except (OSError, ValueError) as exc:
+              # Cannot verify. Do not block on it — rail A still applies.
+              print(f"::warning::Could not check WordPress for today's post ({exc}). "
+                    f"Relying on the state-file cap alone.", file=sys.stderr)
+              print("blocked=false")
+              sys.exit(0)
+          if data.get("error"):
+              print(f"::warning::Post fetch failed: {data['error']}. "
+                    f"Relying on the state-file cap alone.", file=sys.stderr)
+              print("blocked=false")
+              sys.exit(0)
+          TITLE_PREFIX = "daily literature connections \u2014"
+          def is_ours(post):
+              title = (post.get("title") or "").strip().lower()
+              if title.startswith(TITLE_PREFIX):
+                  return True
+              return "auto-literature-connections" in (post.get("categories") or [])
+          dupes = [p for p in data.get("posts", [])
+                   if p.get("date") == today and is_ours(p)]
+          if dupes:
+              print(f"::warning::A live auto-literature-connections post already exists "
+                    f"for {today}: {dupes[0].get('url')}", file=sys.stderr)
+              print("blocked=true")
+          else:
+              print("blocked=false")
+          PY
+
+      - name: Report publish mode
+        if: steps.cap_state.outputs.blocked != 'true' && steps.cap_wp.outputs.blocked != 'true'
+        run: |
+          if grep -qF 'AUTOMATED PUBLISHING: AUTHORIZED' AUTHORIZATION.md 2>/dev/null; then
+            echo "::notice::AUTHORIZATION.md carries the marker — the skill will publish LIVE."
+          else
+            echo "::notice::No authorization marker — the skill will fall back to a DRAFT."
+          fi
+
+      # ---------------------------------------------------------------------
+      # Run the skill.
+      #
+      # Unlike the weekly digest, this step legitimately holds a publishing
+      # credential (the WP token on disk, which publish_digest.py reads) while
+      # processing third-party notebook posts. That exposure is inherent to what
+      # the skill does and is identical to the existing crontab setup — it is not
+      # introduced by moving to Actions. It is still deliberately kept away from
+      # the GitHub token: no GITHUB_TOKEN in this step's env, and the commit
+      # happens in a separate plain-shell step below.
+      # ---------------------------------------------------------------------
+      - name: Run daily-literature-post
+        id: run_skill
+        if: steps.cap_state.outputs.blocked != 'true' && steps.cap_wp.outputs.blocked != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -o pipefail
+          ALLOWED="Skill,Read,Write,Edit,Glob,Grep"
+          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
+          ALLOWED="$ALLOWED,Bash(python3 scripts/publish_digest.py:*)"
+          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # Broad on purpose: literature-connector builds its PubMed and
+          # Europe PMC URLs at run time, so no prefix rule matches.
+          ALLOWED="$ALLOWED,Bash(curl:*)"
+
+          claude -p "Run the daily-literature-post skill." \
+            --permission-mode acceptEdits \
+            --max-turns 150 \
+            --output-format text \
+            --allowedTools "$ALLOWED" \
+            2>&1 | tee "$RUNNER_TEMP/daily-run.log"
+
+      # Did a publish actually happen? Read it from the state file rather than
+      # parsing the log, so the answer is deterministic. This drives how loud
+      # the push failure below needs to be.
+      - name: Detect publish outcome
+        id: outcome
+        if: steps.run_skill.outcome == 'success'
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime, json, pathlib, sys
+          today = datetime.date.today().isoformat()
+          p = pathlib.Path("digests/.literature-state.json")
+          entries = []
+          if p.exists():
+              try:
+                  entries = [e for e in json.loads(p.read_text()).get("publish_log", [])
+                             if e.get("date") == today]
+              except (ValueError, AttributeError):
+                  pass
+          if entries:
+              e = entries[-1]
+              print(f"published=true")
+              print(f"status={e.get('status')}")
+              print(f"::notice::Published {e.get('status')}: {e.get('url')}", file=sys.stderr)
+          else:
+              print("published=false")
+              print("::notice::Nothing qualified today — no post published.", file=sys.stderr)
+          PY
+
+      - name: Commit and push state
+        if: steps.run_skill.outcome == 'success'
+        env:
+          PUBLISHED: ${{ steps.outcome.outputs.published }}
+          STATUS: ${{ steps.outcome.outputs.status }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A digests/
+          if git diff --cached --quiet; then
+            echo "No state or digest changes to commit."
+            exit 0
+          fi
+          git commit -q -m "Add daily literature post ($(date +%Y-%m-%d))"
+
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Pushed on attempt ${attempt}."
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+
+          if [ "$PUBLISHED" = "true" ] && [ "$STATUS" = "publish" ]; then
+            echo "::error::A post was published LIVE but the state commit could not be" \
+                 "pushed. digests/.literature-state.json on the default branch does not" \
+                 "record it, so the one-post-per-day cap is not durable. Do NOT re-run" \
+                 "this workflow today — the WordPress cap check will catch it, but" \
+                 "reconcile the state file by hand first."
+          else
+            echo "::error::Could not push the state commit. Re-running today is safe" \
+                 "(nothing went out live), but the state file is out of date."
+          fi
+          exit 1
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-run-log
+          path: ${{ runner.temp }}/daily-run.log
+          if-no-files-found: ignore
