@@ -4,7 +4,7 @@ A tool that summarizes lab notebook posts from [Roberts Lab](https://robertslab.
 
 ## Overview
 
-LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes, and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a small set of Python helper scripts. It also keeps a searchable local archive of every post the five notebooks have ever published, can narrate a digest to audio, and can publish to WordPress.
+LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes (including multi-week arcs found by looking back through the lab's own archive), and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a small set of Python helper scripts. It also keeps a searchable local archive of every post the five notebooks have ever published, can narrate a digest to audio, and can publish to WordPress.
 
 ## For Claude Desktop / GUI Users
 
@@ -95,6 +95,7 @@ The archive lives in a local SQLite database that you build (and periodically re
 - A source with no posts that week is reported as "no activity" rather than silently dropped.
 - Small edits to a post — a fixed typo or link, six diff lines or fewer — are flagged as cosmetic and are not written up as new science.
 - If a notebook fetch fails (rate limit, network), Claude will tell you which source failed instead of quietly returning a partial digest.
+- The full digest's **Historical Connections** subsection needs the local archive. If `.cache/archive.db` has not been built, that one subsection is skipped and the rest of the digest is produced normally — the digest never builds or rebuilds the database on its own.
 - Most publishing paths produce a draft. The two exceptions that go live are called out explicitly in [Automated publishing](#automated-publishing).
 
 ## Repository Structure
@@ -268,17 +269,27 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 
 | Skill | Description |
 |---|---|
-| `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis and literature connections |
+| `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis, multi-week **Historical Connections** drawn from the local archive, a consolidated **Data & Figures** section, and literature connections |
 | `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
 | `daily-literature-post` | Narrow daily counterpart to `full-lab-digest`: keeps only the last day's posts that describe a real scientific finding, runs `literature-connector` on each, and publishes one combined post. Publishes **live** only when authorized (see below); draft otherwise |
 | `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
-| `lab-archive` | Answers "has anyone done X before" by full-text-searching `.cache/archive.db` — every post the five notebooks have ever published — and reports grouped by researcher with a source link per claim. Read-only; it never builds the database |
+| `lab-archive` | Answers "has anyone done X before" by full-text-searching `.cache/archive.db` — every post the five notebooks have ever published — and reports grouped by researcher with a source link per claim. Read-only; it never builds the database. `full-lab-digest` reads the same database, the same way, for its Historical Connections section |
 | `digest-index` | Regenerates `digests/README.md` from scratch as a newest-first index of every digest |
 | `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
 | `digest-audio` | Generates an audio version of a completed digest with Kokoro or Chatterbox-Nano |
 | `digest-audio-publish` | End-to-end: narrates the latest full digest in two editions, uploads the WAVs to the WP media library, and publishes a **new, separate** live post linking to them and back to the digest |
 
 Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all five.
+
+### What the full digest adds on top of the five summaries
+
+Beyond pasting each subagent's summary verbatim, `full-lab-digest` derives three sections from the compiled material. All three are conservative by design: each is omitted rather than padded when there is nothing real to report.
+
+**Cross-Notebook Patterns & Connections** — shared themes, temporal narratives, and apparent contradictions found *within* the current window. A connection is surfaced only when a specific named entity ties two sources together (the same species, the same assay, the same named project); vague overlap like "both involve oysters" does not qualify. Apparent contradictions are flagged `⚠️ Needs human verification` along with what would resolve them.
+
+**Historical Connections** — a subsection nested inside the above that looks *past* the current window for multi-week story arcs the single-window analysis cannot see. It read-only-queries the same `.cache/archive.db` the `lab-archive` skill uses, scoped to the **8 weeks ending the day before the current window starts**. Excluding the current window is deliberate: nothing already shown in the per-source sections can reappear here, and any archived post already cited elsewhere in the digest is discarded as a second guard. It reuses exactly the same set of findings the literature search runs on, so the two sections stay in sync. Archived posts whose permalink is shared with another post in the same notebook carry a `⚠️ shadowed URL` caveat.
+
+**Data & Figures** — a consolidated, per-source entry point into the window's underlying figure links and external data/repository links, gathered from what the subagents already surfaced. It is a pure reorganization step: no new fetches, no new subagent runs, and no invented links. Third-party tool repositories and issue-tracker threads are routed to a separate `Related links (tools, issues)` line so they do not crowd out the lab's own data. A source with no links is left out; if the window has no links at all, the section is omitted entirely.
 
 ### Changing the time window
 
@@ -308,7 +319,8 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 - **`daily-literature-YYYY-MM-DD.md`** — Daily literature-connection posts from `daily-literature-post`: only the day's genuine findings, each paired with recent papers
 - **`full-lab-digest-YYYY-MM-DD-Nd.md`** — Full multi-source digests, named by end date and window length (`-7d` by default). Files predating this convention omit the `-Nd` suffix. Each includes:
   - Per-notebook summaries (all five sources)
-  - Cross-notebook pattern detection (shared species, assays, and themes)
+  - Cross-notebook pattern detection (shared species, assays, and themes), including a **Historical Connections** subsection that reaches back into the archive for multi-week story arcs
+  - A **Data & Figures** section consolidating the window's figure and data links by source
   - Literature connections via PubMed and bioRxiv
 
 Two state files sit alongside them and are committed so de-duplication holds across machines: `.digest-state.json` (post URLs already digested) and `.literature-state.json` (post URLs already connected to literature, plus the daily post's publish log).
