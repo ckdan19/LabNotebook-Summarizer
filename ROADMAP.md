@@ -7,6 +7,86 @@ rather than being renumbered.
 
 ---
 
+## Near term — documentation
+
+### 13. Document how to add a new GitHub-hosted notebook
+
+Adding a sixth notebook is currently a read-the-whole-repo job. Every piece of the
+work already exists and is generic — `fetch_github_notebook.py` is config-driven,
+the agents share one formatting contract, and the archive builder takes a source
+list — but nothing says *which* eleven places have to change, so the only way to
+find them is to grep for `grace` and imitate. That is exactly the kind of knowledge
+that should be a written procedure, especially since the pipeline is meant to keep
+running after whoever built it has left the lab.
+
+The deliverable is one document — [docs/adding-a-notebook.md](docs/adding-a-notebook.md),
+linked from the README's Data Sources section — walking the touchpoints in dependency
+order, with Grace's notebook as the worked example (it is the most instructive: the only
+one needing `file_dates`, and the only Jekyll layout among three Quarto sites).
+
+**The document is written.** What remains of this item is the count-free-prose refactor
+described at the end; until that lands, the document carries the grep that finds the
+hardcoded counts instead.
+
+**Code (three files):**
+
+1. **`NOTEBOOKS` entry** in
+   [scripts/fetch_github_notebook.py](scripts/fetch_github_notebook.py) — `repo`,
+   `prefix`, `suffix`, plus `file_dates: True` only when the agent needs per-file
+   commit history. Worth explaining that `suffix` is matched against the full path,
+   so `/index.qmd` pins folder-per-post layouts while `.qmd` also accepts flat files.
+2. **A `derive_permalink` branch** in
+   [scripts/notebook_parsing.py](scripts/notebook_parsing.py) — the file-path →
+   published-URL mapping. This is the one step with no generic fallback: the function
+   raises `ValueError` on an unknown source, so the archive build fails loudly rather
+   than storing an un-citable post. Note the Jekyll case (the `YYYY-MM-DD-` prefix is
+   dropped from the slug) versus the Quarto case (`index.*` is stripped).
+3. **`GITHUB_SOURCES` and `DEFAULT_AUTHORS`** in
+   [scripts/build_archive.py](scripts/build_archive.py) — one list entry (kept in
+   ascending notebook size, so an interrupted build has finished the cheap ones) plus the
+   author fallback used when front matter omits `author`. `lab-archive` groups by author,
+   so a missing entry files the new notebook's posts under `None`.
+
+**Agent (two files):**
+
+4. **`.claude/agents/<name>-notebook-agent.md`** — copy an existing agent and replace
+   only the notebook-specific half. The document should state the seven fields that
+   actually differ (fetch config, repo structure, front-matter fields to extract,
+   published permalink convention, no-activity message, header, block fields) and that
+   everything else belongs in
+   [notebook-digest-format.md](.claude/shared/notebook-digest-format.md), not in the
+   agent. Also: the agent must skip its own file write when invoked by
+   `full-lab-digest`.
+5. **The agent roster** at the top of
+   [notebook-digest-format.md](.claude/shared/notebook-digest-format.md), which names
+   the four current agents.
+
+**Skills and docs (four files):** the source list and agent list in
+[full-lab-digest/SKILL.md](.claude/skills/full-lab-digest/SKILL.md) (step 2, the
+per-source section template, the Data & Figures source order), the source enumeration
+and source-label map in [lab-archive/SKILL.md](.claude/skills/lab-archive/SKILL.md),
+the filename-prefix → source mapping in
+[digest-index/SKILL.md](.claude/skills/digest-index/SKILL.md), and the Data Sources
+table in [README.md](README.md). Plus a `derive_permalink` case in
+[tests/test_notebook_parsing.py](tests/test_notebook_parsing.py), and — for anyone
+running unattended — a `fetch_github_notebook.py --notebook <name>` entry in
+`.claude/settings.local.json` so the fetch does not stop on a permission prompt.
+
+**The real friction, which the document should name rather than hide:** the count
+"five" is written into prose in a dozen places — "all five subagents", "wait for all
+five", "the five compiled summaries", "every post the five notebooks have ever
+published" — across `full-lab-digest`, `lab-archive`, `tumbling-oysters-agent`, and
+the README. Adding a notebook without updating those leaves instructions that
+actively contradict the agent roster, and a skill told to wait for five returns while
+six are running. Two options: enumerate the occurrences in the checklist, or make the
+prose count-free ("all notebook subagents", "every source listed in step 2") as part
+of this item so the next addition is a shorter diff. The second is the better fix and
+is cheap to do while writing the document.
+
+Independent of every other roadmap item — no new scripts, no network, no state.
+
+---
+
 ## Longer term — features
 
 ### 12. Literature links as comments on genefish.wordpress.com posts
