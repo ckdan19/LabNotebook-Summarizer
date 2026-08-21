@@ -163,10 +163,12 @@ _This section consolidates, grouped by source, the figure links and external dat
 
     Only archive posts with `date` between `hist_start` and `hist_end` inclusive are eligible. This deliberately excludes the current window (`week_start`…`week_end`) so this subsection never re-surfaces a post already shown in the per-source sections or the same-window analysis above. Note that `posts.date` is `NULL` on a few archived posts; the `BETWEEN` bound evaluates to false for those, so undated posts are intentionally excluded (a post with no date cannot be placed in the 8-week window) — this is expected, not a bug. As a second guard, also discard any archive result whose `url` matches a post already surfaced anywhere in this digest (per-source sections or step 7 bullets), so nothing is duplicated across the digest.
 
-    **Querying the archive — read-only, exactly like `lab-archive`.** Open the same read-only connection and issue only `SELECT`s; never write to or rebuild the database. If `.cache/archive.db` does not exist (or has no `posts` table), do not build it — skip this subsection entirely and note nothing (the rest of the digest proceeds normally). For each selected finding, reduce it to the **specific named entities** it involves (the exact species, the exact assay/method, the named project or experiment) and build an FTS5 `MATCH` string over those entities, following `lab-archive`'s term-derivation and sanitization rules (quote any term containing FTS5 syntax characters, group synonyms with `OR`, use prefix `*` where helpful). Then run, with the date bound applied:
+    **Querying the archive — read-only, exactly like `lab-archive`.** Open the same read-only connection and issue only `SELECT`s; never write to or rebuild the database. If `.cache/archive.db` does not exist (or has no `posts` table), do not build it — skip this subsection entirely and note nothing (the rest of the digest proceeds normally). For each selected finding, reduce it to the **specific named entities** it involves (the exact species, the exact assay/method, the named project or experiment) and build an FTS5 `MATCH` string over those entities, following `lab-archive`'s term-derivation and sanitization rules (quote any term containing FTS5 syntax characters, group synonyms with `OR`, use prefix `*` where helpful).
+
+    **Run every finding's query in one script invocation, not one per finding.** These are local, read-only lookups against the same open connection with no external rate limit to respect (unlike step 10's literature searches), so there is no reason to pay a separate tool round-trip per finding. Loop over the full set of match strings in a single Python process and print one structured result per finding (e.g. a JSON object keyed by finding label) so the whole subsection's data comes back in one turn:
 
     ```python
-    import sqlite3
+    import json, sqlite3
     conn = sqlite3.connect("file:.cache/archive.db?mode=ro", uri=True)
     SQL = """
     SELECT p.author, p.source, p.date, p.title, p.url, p.shadowed,
@@ -178,10 +180,18 @@ _This section consolidates, grouped by source, the figure links and external dat
     ORDER BY p.date DESC, bm25(posts_fts)
     LIMIT 40
     """
-    rows = conn.execute(SQL, (match_string, hist_start, hist_end)).fetchall()
+    results = {}
+    for label, match_string in findings.items():  # one entry per selected finding
+        try:
+            rows = conn.execute(SQL, (match_string, hist_start, hist_end)).fetchall()
+        except sqlite3.OperationalError:
+            # FTS5 syntax error — re-quote exactly as lab-archive does, then retry once.
+            rows = conn.execute(SQL, (requoted_match_string, hist_start, hist_end)).fetchall()
+        results[label] = rows
+    print(json.dumps(results, default=str))
     ```
 
-    Wrap the `MATCH` in try/except and re-quote on an FTS5 syntax error, exactly as `lab-archive` does.
+    Each finding's query, date bound, column list, and re-quote-on-syntax-error handling are unchanged from before — only the number of tool round trips changes (one script covering every finding instead of one script per finding). Parse the single JSON result and apply the rest of this step (relevance checks, formatting, omission rules) exactly as below.
 
     **What counts as a connection (conservatism carries over).** A candidate archive post qualifies **only** if it shares a **real, specific, named entity** with the current finding — the same species, the same assay, the same named project/experiment — **and** reads as though it *sets up*, *follows up on*, *resolves*, or *contradicts* the current finding across the weeks. Apply the same conservatism rule as step 7: never surface a connection built on a vague thematic match ("both about oysters", "both involve stress") — the shared entity must be specific and named. Apply `lab-archive`'s relevance check too: discard incidental keyword hits where the entity is only mentioned in passing.
 
