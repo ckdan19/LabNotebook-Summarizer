@@ -1,0 +1,35 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # README states a 3.8+ floor, but 3.8 is EOL and not available on the
+        # current ubuntu-latest image. 3.9 is the lowest version testable here.
+        python-version: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # No pip install step: the suite is stdlib unittest with every HTTP call
+      # mocked, so it needs no dependencies and makes no network requests.
+      - name: Run test suite
+        run: python -m unittest discover -s tests -v
+
+      - name: Check SQLite has FTS5
+        run: |
+          python -c "import sqlite3; sqlite3.connect(':memory:').execute('CREATE VIRTUAL TABLE t USING fts5(x)'); print('FTS5 available')"
