@@ -125,6 +125,8 @@ LabNotebook-Summarizer/
 ├── memory/                  # Skill documentation and design notes
 │   ├── MEMORY.md
 │   └── skill-literature-connector.md
+├── docs/
+│   └── adding-a-notebook.md  # How to add a new GitHub-hosted notebook source
 ├── AUTHORIZATION.md         # The switch that allows the daily literature post to publish live
 ├── ROADMAP.md               # Planned improvements, roughly in priority order
 └── README.md
@@ -143,6 +145,9 @@ The tool currently monitors five notebook sources:
 | Sam's Notebook (Sam White) | GitHub | [RobertsLab/sams-notebook](https://github.com/RobertsLab/sams-notebook) |
 | Grace Crandall's Notebook | GitHub | [grace-ac/grace-ac.github.io](https://github.com/grace-ac/grace-ac.github.io) |
 | Genefish WordPress | WordPress | [genefish.wordpress.com](https://genefish.wordpress.com) |
+
+Adding another GitHub-hosted notebook is a documented, eleven-file procedure — see
+[docs/adding-a-notebook.md](docs/adding-a-notebook.md).
 
 ## Scripts
 
