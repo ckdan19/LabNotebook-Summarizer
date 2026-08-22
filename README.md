@@ -16,7 +16,7 @@ You do not need to run any Python yourself. The skills and subagents in this rep
 2. Clone this repository: `git clone https://github.com/ckdan19/LabNotebook-Summarizer.git`
 3. In Claude, open a Claude Code session **with this repository as the working directory**. The skills in `.claude/skills/` and subagents in `.claude/agents/` load automatically from the project folder — if you open a different folder, none of the requests below will work.
 4. *(Optional but recommended)* Set `GITHUB_TOKEN` in your environment to raise the GitHub API rate limit. Without it, one full digest run uses about 10 of your 60 hourly calls.
-5. *(Only if you want to publish)* Save a WordPress.com API token to `~/.config/LabNotebook-Summarizer/wp_token` with `chmod 600`. The same token is used for publishing posts and for uploading digest audio.
+5. *(Only if you want to publish)* Save a WordPress.com API token to `~/.config/LabNotebook-Summarizer/wp_token` with `chmod 600`. See [docs/WORDPRESS_SETUP.md](docs/WORDPRESS_SETUP.md) for how to obtain and store the token. The same token is used for publishing posts and for uploading digest audio.
 6. *(Only if you want the archive search)* Build the local post archive once with `python3 scripts/build_archive.py` (see [Scripts](#scriptsbuild_archivepy)).
 
 Then just type a request in the chat box.
@@ -367,7 +367,7 @@ rather than loading the real models.
 - `GITHUB_TOKEN` or `GH_TOKEN` in the environment — optional for the 7-day fetchers, but strongly recommended for `build_archive.py`, since it raises the GitHub API rate limit from 60 to 5,000 requests/hour. The `gh` CLI is **not** required.
 - Claude Code (for running skills)
 - Internet access to the WordPress REST API and GitHub
-- A WordPress.com API token at `~/.config/LabNotebook-Summarizer/wp_token` (mode 600) — only for publishing posts and uploading digest audio
+- A WordPress.com API token at `~/.config/LabNotebook-Summarizer/wp_token` (mode 600) — only for publishing posts and uploading digest audio (see [docs/WORDPRESS_SETUP.md](docs/WORDPRESS_SETUP.md) to obtain one)
 - There is no `sqlite3` CLI requirement; the archive is queried through Python's built-in `sqlite3` module
 
 ## Related

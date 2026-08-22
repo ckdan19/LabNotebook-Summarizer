@@ -77,6 +77,8 @@ If the token file is missing or empty, the error explains how to create it; rela
 
 > `WordPress token not found. Create ~/.config/LabNotebook-Summarizer/wp_token containing your WordPress.com API access token (generate one at https://developer.wordpress.com/apps/).`
 
+For the full walkthrough of registering an app and obtaining/storing the token, point the user to [docs/WORDPRESS_SETUP.md](../../../docs/WORDPRESS_SETUP.md).
+
 ## Security rules (always enforced)
 
 - The token is read from `~/.config/LabNotebook-Summarizer/wp_token` by the script on each run — never printed to the conversation, never written to another file, never placed in a command line, and never stored between sessions.
