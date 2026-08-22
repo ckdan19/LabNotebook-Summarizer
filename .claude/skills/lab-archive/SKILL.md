@@ -1,6 +1,6 @@
 # Lab Archive Search Skill
 
-Trigger this skill when the user asks a **question about the lab's own accumulated history** — phrased like **"has anyone done X before"**, **"what do we know about Y"**, **"has anyone in the lab worked on Z"**, **"did we ever try …"**, or **"search the archive for …"**. It answers by full-text-searching the local archive of every post the five lab notebooks have ever published, and reports back grouped by researcher with a cited source link for every claim.
+Trigger this skill when the user asks a **question about the lab's own accumulated history** — phrased like **"has anyone done X before"**, **"what do we know about Y"**, **"has anyone in the lab worked on Z"**, **"did we ever try …"**, or **"search the archive for …"**. It answers by full-text-searching the local archive of every post the six lab notebooks have ever published, and reports back grouped by researcher with a cited source link for every claim.
 
 This is distinct from the notebook agents (which fetch *recent* activity from GitHub/WordPress live) and from `literature-connector` (which searches *external* published literature). This skill searches **only the lab's own archived posts** already captured in `.cache/archive.db`.
 
@@ -15,7 +15,7 @@ This skill **only queries** `.cache/archive.db`. It never creates, writes to, up
 Two relevant objects (created by `scripts/build_archive.py`):
 
 - **`posts`** — one row per archived post, with columns:
-  - `source` — one of `tumbling-oysters`, `grace`, `ariana`, `sams`, `wordpress`
+  - `source` — one of `tumbling-oysters`, `grace`, `ariana`, `sams`, `megan`, `wordpress`
   - `author` — the researcher who wrote the post (this is what we group by)
   - `date` — `YYYY-MM-DD` (may be `NULL` on a few posts)
   - `title`
@@ -135,7 +135,7 @@ Format the answer as:
 here must point to one of the cited posts above — no finding stated without its link.]
 ```
 
-Source labels: `tumbling-oysters` → Tumbling Oysters, `grace` → Grace's notebook, `ariana` → Ariana's notebook, `sams` → Sam's notebook, `wordpress` → genefish WordPress. Note that WordPress and Tumbling Oysters have many authors, so the same source may appear under several researchers.
+Source labels: `tumbling-oysters` → Tumbling Oysters, `grace` → Grace's notebook, `ariana` → Ariana's notebook, `sams` → Sam's notebook, `megan` → Megan's notebook, `wordpress` → genefish WordPress. Note that WordPress and Tumbling Oysters have many authors, so the same source may appear under several researchers.
 
 ## Citation discipline (hard rule)
 

@@ -1,8 +1,9 @@
 # GitHub Notebook Digest — Shared Output Contract
 
-This file is the single source of truth for how the four GitHub notebook subagents
+This file is the single source of truth for how the five GitHub notebook subagents
 (`ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`,
-`tumbling-oysters-agent`) fetch, classify, and format post activity. Each agent
+`tumbling-oysters-agent`, `megan-notebook-agent`) fetch, classify, and format post
+activity. Each agent
 `Read`s this file first, then applies the notebook-specific details from its own
 definition (repo, `--notebook` value, URL convention, front-matter fields,
 no-activity message, header, and which block fields to include). The output shape

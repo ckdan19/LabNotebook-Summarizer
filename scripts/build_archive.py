@@ -44,7 +44,7 @@ TIMEOUT = 30
 
 # GitHub sources, in ascending size so a partial/interrupted build makes progress
 # on the cheap ones first. Each maps to a NOTEBOOKS entry (repo/prefix/suffix).
-GITHUB_SOURCES = ["tumbling-oysters", "grace", "ariana", "sams"]
+GITHUB_SOURCES = ["megan", "tumbling-oysters", "grace", "ariana", "sams"]
 WORDPRESS_SOURCE = "wordpress"
 ALL_SOURCES = GITHUB_SOURCES + [WORDPRESS_SOURCE]
 
@@ -52,6 +52,7 @@ ALL_SOURCES = GITHUB_SOURCES + [WORDPRESS_SOURCE]
 # a few posts elsewhere leave it blank. These are the fallbacks used when the block
 # has no author, matching each notebook's single known author.
 DEFAULT_AUTHORS = {
+    "megan": "Megan Ewing",
     "tumbling-oysters": "Steven Roberts",
     "grace": "Grace Crandall",
     "ariana": "Ariana Huffmyer",

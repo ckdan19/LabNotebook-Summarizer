@@ -4,7 +4,7 @@ Trigger this skill when the user asks for the **full weekly lab digest**, a **co
 
 ## What this skill does
 
-Runs all five lab-notebook subagents in parallel, collects their summaries, and compiles them into a single Markdown file organized by source. The window defaults to the last 7 days, but the user can request any window ("a full lab digest for the last 14 days").
+Runs all six lab-notebook subagents in parallel, collects their summaries, and compiles them into a single Markdown file organized by source. The window defaults to the last 7 days, but the user can request any window ("a full lab digest for the last 14 days").
 
 The skill keeps persistent state in `digests/.digest-state.json` so that a post already covered in a previous digest is never covered again, even if it still falls inside the requested window. That file is committed to the repo (never gitignored) so the de-duplication works across machines and collaborators.
 
@@ -12,17 +12,18 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 
 1. **Determine the window**: set `days` to the number of days the user asked for (e.g. "the last 14 days", "past month" → 30). If the user did not specify a window, `days` = 7. Use this same `days` value everywhere below.
 
-2. **Launch all five subagents in parallel** in a single message (do NOT run them one at a time). Substitute `days` into the prompt:
+2. **Launch all six subagents in parallel** in a single message (do NOT run them one at a time). Substitute `days` into the prompt:
 
    - `tumbling-oysters-agent` — prompt: "Summarize all posts from the last [days] days. Return a structured Markdown summary with a ## header, the post titles/dates/URLs, and 2–3 sentence summaries. If there are no posts, say so explicitly."
    - `ariana-notebook-agent` — same prompt as above
    - `sams-notebook-agent` — same prompt as above
    - `grace-notebook-agent` — same prompt as above
+   - `megan-notebook-agent` — same prompt as above
    - `wordpress-agent` — same prompt as above
 
    Each subagent passes the window to its fetch script as `--days [days]`.
 
-   Wait for **all five** to return before proceeding.
+   Wait for **all six** to return before proceeding.
 
 3. **Load digest state and exclude already-covered posts.** The digest tracks which posts have appeared in a previous digest so no post is ever covered twice.
 
@@ -38,7 +39,7 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
      }
      ```
 
-     `digested_urls` is the set of every post URL that has appeared in any previous digest, across all five sources.
+     `digested_urls` is the set of every post URL that has appeared in any previous digest, across all six sources.
 
    - **If the state file does not exist** (first run): treat `digested_urls` as an empty set, treat every post as new, and do not exclude anything. You will create the file in the state-update step below.
 
@@ -59,7 +60,7 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 ```
 # Full Lab Digest — [week_start] to [week_end] ([days] days)
 
-> [N] of 5 sources had activity in the last [days] days. [M] had none.
+> [N] of 6 sources had activity in the last [days] days. [M] had none.
 
 ---
 
@@ -84,6 +85,12 @@ The skill keeps persistent state in `digests/.digest-state.json` so that a post 
 ## Grace Crandall's Notebook
 
 [paste the grace-notebook-agent summary verbatim here]
+
+---
+
+## Megan Ewing Lab Notebook
+
+[paste the megan-notebook-agent summary verbatim here]
 
 ---
 
@@ -122,7 +129,7 @@ _This section consolidates, grouped by source, the figure links and external dat
    - If, after the step 3 exclusion, a source has any posts that were excluded as already-covered, add one line at the end of that source's section noting the count, e.g. `_2 posts from this window were already covered in a previous digest and are omitted here._` (Use "1 post ... was" for a single post.)
    - If a subagent reported no activity, or all of its posts were excluded as already-covered, write a single line under that section's header: `_No new posts in the last [days] days._` — followed by the already-covered note above if any posts were excluded.
 
-7. **Write the Cross-Notebook Patterns & Connections section** by analyzing only the five compiled summaries (not the original source content). Look for three specific types of connections:
+7. **Write the Cross-Notebook Patterns & Connections section** by analyzing only the six compiled summaries (not the original source content). Look for three specific types of connections:
 
    - **Shared themes** — the same named topic, organism, assay, or method appearing in two or more summaries in this window. Examples of qualifying shared entities: the same species name, the same assay (e.g., "qPCR"), the same treatment (e.g., "PolyIC immune priming"), the same named project. Vague thematic overlap (e.g., "both involve marine biology" or "both discuss oysters in general") does not qualify.
 
@@ -212,7 +219,7 @@ _This section consolidates, grouped by source, the figure links and external dat
       [⚠️ Needs human verification — ..., only if this is an apparent contradiction]
     ```
 
-9. **Write the Data & Figures section** by consolidating the figure and data/repository links that the five subagents already surfaced in their per-source summaries. This is a reorganization step only — it uses the compiled summaries you already have and issues no new fetches, subagent runs, or external calls.
+9. **Write the Data & Figures section** by consolidating the figure and data/repository links that the six subagents already surfaced in their per-source summaries. This is a reorganization step only — it uses the compiled summaries you already have and issues no new fetches, subagent runs, or external calls.
 
    - **Gather the links.** Scan each per-source summary (the verbatim subagent output pasted under each `##` header, after the step-3 exclusion) for two kinds of links:
      - **Figure links** — the entries the subagents list under per-post `Figures:` listings, both local repo-hosted image paths and external image/figure URLs.
@@ -222,7 +229,7 @@ _This section consolidates, grouped by source, the figure links and external dat
 
    - **Only use links that already appear in the compiled summaries.** Never invent a figure or data link, and never reconstruct one from memory — if a subagent did not surface it, it does not go here.
 
-   - **Group by source**, using the same five source labels and order as the per-source sections above (Tumbling Oysters, Ariana Huffmyer, Sam's Notebook, Grace Crandall, Genefish WordPress). Under each source, list its **primary** figure and data links first; then, if that source has any tool/issue links, add a `_Related links (tools, issues):_` line followed by those as sub-bullets. Attribute each link to the post it came from (post title or short label) so the entry point stays navigable. Omit a source that has no links in either group (do not write an empty source sub-heading), and omit the `_Related links (tools, issues):_` line for a source that has none.
+   - **Group by source**, using the same six source labels and order as the per-source sections above (Tumbling Oysters, Ariana Huffmyer, Sam's Notebook, Grace Crandall, Megan Ewing, Genefish WordPress). Under each source, list its **primary** figure and data links first; then, if that source has any tool/issue links, add a `_Related links (tools, issues):_` line followed by those as sub-bullets. Attribute each link to the post it came from (post title or short label) so the entry point stays navigable. Omit a source that has no links in either group (do not write an empty source sub-heading), and omit the `_Related links (tools, issues):_` line for a source that has none.
 
    - **Deduplicate** obvious repeats — if the same URL appears more than once (e.g., the same figure linked from two posts, or an identical local path), list it once. Treat URLs that differ only by a trailing slash as the same URL.
 
@@ -252,7 +259,7 @@ _This section consolidates, grouped by source, the figure links and external dat
 
    **Selecting findings to check:**
    - First, include every specific finding already named in the Cross-Notebook Patterns & Connections section (shared themes, temporal narratives, apparent contradictions). These are the highest-priority targets because they are the most scientifically notable and cross-validated.
-   - Then scan the five per-source summaries for any additional standalone finding that appears substantial — a concrete experimental result, a surprising observation, or a well-defined molecular/physiological outcome. Aim for at most 2–4 additional standalone findings across all sources; skip routine protocol notes, scheduling updates, or findings already covered by the cross-notebook bullets.
+   - Then scan the six per-source summaries for any additional standalone finding that appears substantial — a concrete experimental result, a surprising observation, or a well-defined molecular/physiological outcome. Aim for at most 2–4 additional standalone findings across all sources; skip routine protocol notes, scheduling updates, or findings already covered by the cross-notebook bullets.
 
    **For each selected finding**, invoke the `literature-connector` skill exactly as if the user had typed:
 
