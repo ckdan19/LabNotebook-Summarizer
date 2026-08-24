@@ -34,6 +34,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      # publish_digest.py needs python-markdown (or pandoc) — the only
+      # non-stdlib dependency in the publish path.
+      - name: Install Markdown converter
+        run: python -m pip install --quiet markdown
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -41,15 +46,24 @@ jobs:
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
 
-      - name: Verify API key is configured
+      - name: Verify secrets are configured
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::ANTHROPIC_API_KEY secret is not set. Add it under" \
-                 "Settings > Secrets and variables > Actions."
-            exit 1
-          fi
+          missing=0
+          [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::ANTHROPIC_API_KEY is not set. Add it under Settings > Secrets and variables > Actions."; missing=1; }
+          [ -n "$WORDPRESS_TOKEN" ] || { echo "::error::WORDPRESS_TOKEN is not set. Add it under Settings > Secrets and variables > Actions."; missing=1; }
+          exit $missing
+
+      - name: Install WordPress token
+        env:
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          install -d -m 700 "$HOME/.config/LabNotebook-Summarizer"
+          umask 077
+          printf '%s' "$WORDPRESS_TOKEN" > "$HOME/.config/LabNotebook-Summarizer/wp_token"
+          chmod 600 "$HOME/.config/LabNotebook-Summarizer/wp_token"
 
       # ---------------------------------------------------------------------
       # Post archive (.cache/archive.db) — optional, and non-fatal.
@@ -128,6 +142,30 @@ jobs:
           git push origin "HEAD:${GITHUB_REF_NAME}"
         env:
           DAYS: ${{ inputs.days || '7' }}
+
+      # ---------------------------------------------------------------------
+      # Publish the digest to WordPress as a DRAFT.
+      #
+      # This mirrors what the WSL crontab does for the weekly digest — it hands
+      # the freshly generated digest to publish_digest.py with --status draft so
+      # a human can review it before it goes live. publish_digest.py defaults to
+      # draft and treats --status publish as an explicit override, so there is
+      # no path here by which this posts live. The token installed above is read
+      # by publish_digest.py from disk and only ever sent in a request header.
+      #
+      # Runs after commit/push so the digest and its de-duplication state are
+      # already durable on the branch; a draft-publish failure then fails loudly
+      # without having lost that state, and re-publishing a draft by hand is safe.
+      # ---------------------------------------------------------------------
+      - name: Publish digest draft
+        run: |
+          digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
+          if [ -z "$digest" ]; then
+            echo "::error::No full-lab-digest-*.md file found to publish."
+            exit 1
+          fi
+          echo "Publishing draft from ${digest}"
+          python3 scripts/publish_digest.py "$digest" --status draft
 
       - name: Upload run log
         if: always()
