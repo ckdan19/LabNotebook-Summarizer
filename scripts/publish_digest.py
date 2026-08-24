@@ -167,8 +167,11 @@ def post_digest(site: str, token: str, title: str, content: str, categories=None
     """
     body = {"title": title, "content": content, "status": status}
     if categories:
-        # WordPress creates any category name it doesn't already know.
-        body["categories"] = list(categories)
+        # Only categories that ALREADY exist on the site are attached; this token
+        # cannot create new ones, so an unknown name is silently dropped by the API
+        # (verified 2026-08-24). JSON array and comma-separated string behave
+        # identically on the wire — we send a string.
+        body["categories"] = ",".join(categories)
     payload = json.dumps(body)
     request = Request(
         API_BASE.format(site=site),

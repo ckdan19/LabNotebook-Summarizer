@@ -325,6 +325,40 @@ class TestPostDraft(unittest.TestCase):
 
         self.assertEqual(captured["payload"]["status"], "publish")
 
+    def test_categories_sent_as_comma_separated_string(self):
+        # The WordPress.com v1.1 API expects `categories` as a comma-separated
+        # string of names, not a JSON array. Pin the exact wire format.
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
+
+        with patch("publish_digest.urlopen", side_effect=fake_urlopen):
+            publish_digest.post_digest(
+                "example.wordpress.com", "sekrit", "T", "<p>c</p>",
+                categories=["Alpha", "Beta Gamma"],
+            )
+
+        value = captured["payload"]["categories"]
+        self.assertIsInstance(value, str)
+        self.assertEqual(value, "Alpha,Beta Gamma")
+
+    def test_categories_omitted_when_empty(self):
+        # No categories means the key must not appear on the wire at all.
+        captured = {}
+
+        def fake_urlopen(request, timeout=None):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return self._FakeResponse(201, b'{"URL": "https://site/p/1", "ID": 1}')
+
+        with patch("publish_digest.urlopen", side_effect=fake_urlopen):
+            publish_digest.post_digest(
+                "example.wordpress.com", "sekrit", "T", "<p>c</p>", categories=[]
+            )
+
+        self.assertNotIn("categories", captured["payload"])
+
     def test_status_defaults_to_draft(self):
         captured = {}
 
