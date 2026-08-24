@@ -4,7 +4,7 @@ Trigger this skill when the user asks to **run the daily literature connection p
 
 ## What this skill does
 
-Fetches the last few days of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress. The post is tagged with the `auto-literature-connections` category so it is excluded from future daily runs, and every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
+Fetches the last few days of lab notebook posts, keeps only the ones that describe a **real scientific finding**, runs the `literature-connector` skill against each finding, and assembles the results into a single Markdown post published to WordPress. Future daily runs exclude this skill's own posts primarily by a title-prefix match (titles beginning `Daily Literature Connections —`); the post is also tagged with the `auto-literature-connections` category as an intended second signal, but that tag currently never sticks (the publishing token cannot create the category, and it does not yet exist on the site — see step 3). Every post it processes is recorded in `digests/.literature-state.json` so it is never processed twice.
 
 This is a narrow daily counterpart to `full-lab-digest`: it does not summarize the notebooks, run subagents, or search the archive — it only connects today's genuine findings to external literature.
 
@@ -167,7 +167,7 @@ python3 scripts/publish_digest.py digests/daily-literature-[today].md --category
 python3 scripts/publish_digest.py digests/daily-literature-[today].md --category auto-literature-connections --status draft
 ```
 
-`--status draft` is also the script's default, so omitting `--status` is equivalent to the draft command; pass it explicitly here to make the chosen mode unambiguous. The `--category auto-literature-connections` flag tags the post so step 3 of future runs correctly excludes it (WordPress creates the category if it does not already exist).
+`--status draft` is also the script's default, so omitting `--status` is equivalent to the draft command; pass it explicitly here to make the chosen mode unambiguous. The `--category auto-literature-connections` flag is intended to tag the post as a secondary signal for step 3, but it only takes effect if the category already exists on the site — the publishing token **cannot create new categories**, so the tag currently never applies and posts come back as `Uncategorized`. Step 3's title-prefix check is what actually excludes this skill's own posts; the category becomes a redundant second layer only once an admin creates it manually.
 
 Confirm the command returned an HTTP 200/201 and a URL before proceeding, and note the reported `post_status` (`publish` or `draft`) — it should match the mode you intended. If publishing fails, report the error and **do not** update the state file (step 8) — the posts were not successfully connected/published, so they should remain eligible for the next run.
 

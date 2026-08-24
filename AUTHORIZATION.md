@@ -33,7 +33,10 @@ line above is the single control point — editing only that line is sufficient.
 ## What is authorized
 
 - **Scope:** live (immediate) publishing of the automated daily post produced by the
-  `daily-literature-post` skill, tagged with the `auto-literature-connections` category.
+  `daily-literature-post` skill, which attempts to tag the post with the
+  `auto-literature-connections` category (this tag does not currently apply — see
+  "Safety rails" — because the category does not yet exist on the site and the
+  publishing token cannot create it).
 - **Not authorized by this file:** any other skill or script. The weekly / full lab
   digest pipeline (`full-lab-digest`, `weekly-lab-digest`, `wordpress-publisher`) is
   unaffected and continues to publish as it did before. `scripts/publish_digest.py`
@@ -52,8 +55,9 @@ _Fill in the actual names and date before relying on this authorization._
 
 ## Safety rails
 
-Live publishing is deliberately hard to trigger by accident. Two independent rails,
-both enforced by the `daily-literature-post` skill, protect it:
+Live publishing is deliberately hard to trigger by accident, and the skill also keeps
+its own output out of its own inputs. Three independent rails, all enforced by the
+`daily-literature-post` skill, protect it:
 
 1. **Draft fallback (this file).** Live publishing happens **only** while this file
    exists and contains the exact authorization marker (the quoted line in the
@@ -64,8 +68,22 @@ both enforced by the `daily-literature-post` skill, protect it:
    (live or draft). It records each publish in `digests/.literature-state.json` under
    `publish_log`. If an entry already exists for today, the skill refuses to publish
    again and reports why, so a double-trigger cannot produce duplicate posts.
+3. **Self-exclusion of the skill's own posts.** The skill must not re-ingest its own
+   past posts as new source "findings." The **primary, currently-working guard is a
+   title-prefix match:** the skill's own posts have titles beginning with
+   `Daily Literature Connections —`, and any candidate whose title matches that prefix
+   is excluded from processing. The skill *also* passes
+   `--category auto-literature-connections` when publishing, intending the category as a
+   second exclusion signal — but applying that tag requires the
+   `auto-literature-connections` category to already exist on the WordPress site, and the
+   publishing token **cannot create new categories**. As a result the category has never
+   actually been applied to any post (the API returns published posts as `Uncategorized`),
+   even though the code sends it correctly. Creating that category is **pending manual
+   setup by an admin (Steven)**. Until then, the title-prefix match is the sole mechanism.
+   Once the category exists it becomes a **redundant second layer on top of the title
+   check — not the primary mechanism.**
 
-If either rail is unclear or the state file looks wrong, the safe action is always to
+If any rail is unclear or the state file looks wrong, the safe action is always to
 remove this file — the skill will fall back to drafts, which are private until a human
 reviews and publishes them.
 
