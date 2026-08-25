@@ -227,7 +227,7 @@ Converts a Markdown digest to sanitized HTML and posts it to WordPress.com. Used
 python3 scripts/publish_digest.py digests/full-lab-digest-2026-07-21.md --dry-run
 ```
 
-The first line of the digest must be a `# ` heading; it becomes the post title and is dropped from the body. `--dry-run` converts and sanitizes without reading the token or contacting the API. Options: `--site`, `--token-file` (default `~/.config/LabNotebook-Summarizer/wp_token`), `--category NAME` (repeatable; created if it does not exist), `--status {draft,publish}`.
+The first line of the digest must be a `# ` heading; it becomes the post title and is dropped from the body. `--dry-run` converts and sanitizes without reading the token or contacting the API. Options: `--site`, `--token-file` (default `~/.config/LabNotebook-Summarizer/wp_token`), `--category NAME` (repeatable; attaches only if the category already exists on the site — the publishing token cannot create new categories, and unknown names are silently dropped), `--status {draft,publish}`.
 
 Handling notes:
 
