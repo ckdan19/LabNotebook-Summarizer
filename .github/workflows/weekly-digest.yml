@@ -114,7 +114,12 @@ jobs:
           # holds no credentials, which is what keeps the rule acceptable.
           ALLOWED="$ALLOWED,Bash(curl:*)"
 
+          # Pin the model explicitly. Without --model these runs take whatever
+          # the unpinned @anthropic-ai/claude-code default happens to be on the
+          # day the cron fires, so a CLI default change would silently alter the
+          # output of a published post.
           claude -p "Run the full-lab-digest skill for the last ${DAYS} days." \
+            --model claude-sonnet-5 \
             --permission-mode acceptEdits \
             --max-turns 200 \
             --output-format text \
