@@ -1,0 +1,157 @@
+name: digest-audio-publish
+
+# Manual-only for now. This pipeline (Kokoro TTS -> media upload -> WordPress
+# post) has not been proven reliable in CI yet, so it is NOT wired to a
+# workflow_run trigger off the weekly digest. Run it by hand from the Actions
+# tab, confirm the draft looks right, and only then consider automating it.
+on:
+  workflow_dispatch:
+
+# Nothing here is committed back to the repo: the skill uploads WAVs to the
+# WordPress media library and creates a WordPress post, but writes no files that
+# get pushed (text_to_speech/output/ is gitignored). So this job needs no write
+# access to repo contents — unlike weekly-digest.yml / daily-literature.yml,
+# which commit the generated digest and its de-dup state.
+permissions:
+  contents: read
+
+# Never let two runs overlap: both would generate, upload duplicate media, and
+# create duplicate posts.
+concurrency:
+  group: digest-audio-publish
+  cancel-in-progress: false
+
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.11 to match the text_to_speech/README.md recommended shared version and
+      # stay inside Kokoro's supported 3.10-3.13 range. (The local .venv-tts was
+      # built with 3.12; bump this to "3.12" if you want CI to mirror it exactly.)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Kokoro uses espeak-ng for English fallback / phonemization. The runner
+      # does not ship it, so install the system package before any generation.
+      - name: Install espeak-ng
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends espeak-ng
+
+      # publish_digest.py needs python-markdown (or pandoc) — the only non-stdlib
+      # dependency in the upload/publish path. Installed into the system python,
+      # which is what the skill uses for scripts/publish_digest.py and
+      # scripts/upload_media.py.
+      - name: Install Markdown converter
+        run: python -m pip install --quiet markdown
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Verify secrets are configured
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          missing=0
+          [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::ANTHROPIC_API_KEY is not set. Add it under Settings > Secrets and variables > Actions."; missing=1; }
+          [ -n "$WORDPRESS_TOKEN" ] || { echo "::error::WORDPRESS_TOKEN is not set. Add it under Settings > Secrets and variables > Actions."; missing=1; }
+          exit $missing
+
+      - name: Install WordPress token
+        env:
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          install -d -m 700 "$HOME/.config/LabNotebook-Summarizer"
+          umask 077
+          printf '%s' "$WORDPRESS_TOKEN" > "$HOME/.config/LabNotebook-Summarizer/wp_token"
+          chmod 600 "$HOME/.config/LabNotebook-Summarizer/wp_token"
+
+      # ---------------------------------------------------------------------
+      # Cache the Kokoro model weights.
+      #
+      # KPipeline pulls hexgrad/Kokoro-82M from the Hugging Face hub on the first
+      # real generation, which lands under ~/.cache/huggingface (a few hundred MB).
+      # Caching that directory keeps every run from re-downloading it. The key is
+      # tied to the Kokoro requirement pin as a coarse proxy for "which weights";
+      # restore-keys lets an older cache seed a run whose pin changed.
+      # ---------------------------------------------------------------------
+      - name: Cache Kokoro model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: kokoro-weights-${{ hashFiles('text_to_speech/requirements-kokoro.txt') }}
+          restore-keys: kokoro-weights-
+
+      # The digest-audio-publish skill narrates with .venv-tts/bin/python (NOT the
+      # system python3), because Torch and the model weights live only in that
+      # isolated env. Recreate it here so the skill runs unmodified: a 3.11 venv
+      # with the Kokoro deps installed.
+      - name: Create .venv-tts and install Kokoro
+        run: |
+          python -m venv .venv-tts
+          .venv-tts/bin/python -m pip install --upgrade pip
+          .venv-tts/bin/python -m pip install -r text_to_speech/requirements-kokoro.txt
+
+      # ---------------------------------------------------------------------
+      # Run the skill, publishing as a DRAFT.
+      #
+      # This first CI version deliberately does NOT publish live — same reasoning
+      # as when digest-audio-publish was first built locally: the TTS + upload +
+      # publish pipeline has not been proven reliable here yet. The prompt tells
+      # the skill to publish as a draft, i.e. to drop the step-4 --status publish
+      # override (publish_digest.py defaults to draft). Once this is trusted,
+      # switch the prompt to ask for a live post.
+      #
+      # This step holds the WP token on disk (read by upload_media.py and
+      # publish_digest.py) while processing third-party digest text, which is
+      # inherent to what the skill does and identical to the local setup. It is
+      # kept away from any GitHub credential: no GITHUB_TOKEN in this env.
+      # ---------------------------------------------------------------------
+      - name: Run digest-audio-publish (draft)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -o pipefail
+          ALLOWED="Skill,Read,Write,Edit,Glob,Grep"
+          # Narration runs in the isolated TTS venv, not system python3.
+          ALLOWED="$ALLOWED,Bash(.venv-tts/bin/python -m text_to_speech:*)"
+          # Upload to the WordPress media library (stdlib only).
+          ALLOWED="$ALLOWED,Bash(python3 scripts/upload_media.py:*)"
+          # Create the new audio post (draft — see prompt below).
+          ALLOWED="$ALLOWED,Bash(python3 scripts/publish_digest.py:*)"
+          # Inline python for WAV durations (stdlib wave) and small helpers.
+          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # Resolve the latest digest, and remove the local WAVs after upload.
+          ALLOWED="$ALLOWED,Bash(ls:*)"
+          ALLOWED="$ALLOWED,Bash(rm text_to_speech/output/:*)"
+          # Token existence check the skill may run: [ -s ~/.../wp_token ].
+          ALLOWED="$ALLOWED,Bash([:*)"
+
+          # Pin the model explicitly. Without --model these runs take whatever the
+          # unpinned @anthropic-ai/claude-code default happens to be on the day the
+          # run fires, so a CLI default change would silently alter the output.
+          claude -p "Run the digest-audio-publish skill for the most recent full lab digest. Publish the new audio post as a DRAFT, not live: when you reach the publish step, do NOT pass --status publish — let publish_digest.py use its default draft status. Everything else (generate both narrations, upload both WAVs to the media library, build the audio post, delete the local WAVs after a successful upload) proceeds as the skill describes.
+          This runs headless in CI, so there is no human to answer the skill's confirmation questions in real time. Wherever the skill would normally pause to confirm or ask, do NOT stop — proceed with your best-guess resolution exactly as the skill's own fallbacks describe (e.g. take the most recent full-lab-digest-*.md as the intended digest; if the original digest post's WordPress URL cannot be found, continue anyway rather than blocking). But make every such guess loud and reviewable: at the end of the run, print a clearly labeled 'Headless resolution notes' section in your final report that lists each thing you had to guess, the value you chose, and why (what you looked at and what was ambiguous or missing). At minimum call out: which digest file and date range you selected and whether the selection was ambiguous; and how you resolved the original digest post URL — the exact URL if found and where from, or an explicit statement that it could not be resolved and what placeholder/omission you used instead. The point is that a human reviewing this DRAFT afterward can spot a wrong guess immediately, so err toward over-reporting the uncertain calls." \
+            --model claude-sonnet-5 \
+            --permission-mode acceptEdits \
+            --max-turns 150 \
+            --output-format text \
+            --allowedTools "$ALLOWED" \
+            2>&1 | tee "$RUNNER_TEMP/audio-run.log"
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-run-log
+          path: ${{ runner.temp }}/audio-run.log
+          if-no-files-found: warn
