@@ -49,6 +49,11 @@ Run:
 python3 scripts/fetch_lab_posts.py --days 3
 ```
 
+**If the invoker specified a window, use that number instead of 3.** A request like "run
+the daily-literature-post skill over a window of the last 9 days" means `--days 9`. This
+is how a catch-up run is performed after an outage (see below). Absent an explicit
+window, always use 3.
+
 **Why 3 days and not 1.** The window is deliberately wider than the daily cadence. When
 this skill runs unattended, a scheduled run can be delayed or skipped entirely (GitHub
 Actions cron is best-effort, and a machine running `cron` can be asleep or offline). With
@@ -60,6 +65,14 @@ post is processed at most once, ever. Re-reading a post that was already handled
 is a no-op, so the overlap simply lets a late run catch up on what a missed run skipped.
 Do not narrow this back to `--days 1`; the de-duplication, not the window, is what
 prevents repeats.
+
+**The window is what bounds that self-healing, so know its limit.** A gap *longer* than
+the window is not recovered by it — those posts fall outside every subsequent window and
+are lost exactly as they would be with `--days 1`. This is not hypothetical: a CI
+permission fault stalled every run from 2026-08-25 to 2026-09-01, an 8-day gap against a
+3-day window, and the posts from 2026-08-25 to 2026-08-28 were never evaluated. Recovering
+from a gap that long requires an explicit wider window, which is what the paragraph above
+is for; the daily workflow exposes it as a `days` dispatch input.
 
 Parse the JSON `posts` array. Each post has `author`, `date`, `title`, `url`, `content`, and `categories`.
 

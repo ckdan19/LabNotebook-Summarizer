@@ -4,10 +4,28 @@ on:
   schedule:
     # GitHub cron is UTC-only. 16:00 UTC = 09:00 America/Los_Angeles during PDT,
     # 08:00 during PST. Exact timing matters much less here than for the weekly
-    # job: the skill fetches a 3-day window and de-duplicates on connected_urls,
-    # so a delayed or skipped run catches up instead of losing findings.
+    # job: the skill fetches a multi-day window and de-duplicates on
+    # connected_urls, so a run delayed by a day or two catches up on its own.
+    #
+    # That self-healing has a hard limit, and it is the default window length:
+    # a gap LONGER than `days` loses the posts that fall through it, because
+    # they never appear in any later window. The 2026-08-25..2026-09-01 outage
+    # was 8 days against a 3-day window, so Aug 25-28 were never evaluated.
+    # That is what the `days` input below is for — see it for how to catch up.
     - cron: "0 16 * * *"
   workflow_dispatch:
+    inputs:
+      days:
+        description: >-
+          Window length in days. Leave at 3 for a normal run. Raise it to catch
+          up after an outage longer than the window: the number must span back
+          to the first missed day, counting today as day 1. Widening is safe at
+          any size — connected_urls means a post is processed at most once ever,
+          so re-covered days are a no-op, not a repeat. Note the one-post-per-day
+          cap still applies, so a catch-up produces ONE post covering everything
+          it finds, not one post per missed day.
+        required: false
+        default: "3"
 
 permissions:
   contents: write
@@ -28,8 +46,29 @@ jobs:
       # dates all agree. Under UTC a run near midnight Pacific would compare
       # today's date against yesterday's posts.
       TZ: America/Los_Angeles
+      # Scheduled runs get the default; a dispatch can widen it to catch up.
+      # Resolved once here so the cap check, the skill prompt, and the log all
+      # quote the same number.
+      DAYS: ${{ inputs.days || '3' }}
     steps:
       - uses: actions/checkout@v4
+
+      # A bad `days` reaches the skill as prose inside a prompt, where a typo
+      # would be interpreted rather than rejected. Fail on it here instead.
+      - name: Validate days input
+        run: |
+          case "$DAYS" in
+            ''|*[!0-9]*)
+              echo "::error::days must be a positive integer, got '$DAYS'."
+              exit 1 ;;
+          esac
+          if [ "$DAYS" -lt 1 ] || [ "$DAYS" -gt 60 ]; then
+            echo "::error::days must be between 1 and 60, got '$DAYS'. A window" \
+                 "beyond 60 days is almost certainly a mistake; if it is not," \
+                 "raise this bound deliberately."
+            exit 1
+          fi
+          echo "::notice::Window: last $DAYS day(s)."
 
       - uses: actions/setup-python@v5
         with:
@@ -119,6 +158,10 @@ jobs:
         id: cap_wp
         if: steps.cap_state.outputs.blocked != 'true'
         run: |
+          # Fixed at 3 on purpose — NOT $DAYS. This check only asks whether a
+          # post already exists for TODAY, so the shortest window that reliably
+          # contains today is the right one; widening it with a catch-up $DAYS
+          # would pull in old posts this check would only have to discard.
           python3 scripts/fetch_lab_posts.py --days 3 > "$RUNNER_TEMP/posts.json" || true
           python3 - "$RUNNER_TEMP/posts.json" <<'PY' >> "$GITHUB_OUTPUT"
           import datetime, json, sys
@@ -205,7 +248,7 @@ jobs:
           # the unpinned @anthropic-ai/claude-code default happens to be on the
           # day the cron fires, so a CLI default change would silently alter the
           # output of a published post.
-          claude -p "Run the daily-literature-post skill." \
+          claude -p "Run the daily-literature-post skill over a window of the last ${DAYS} days." \
             --model claude-sonnet-5 \
             --permission-mode acceptEdits \
             --max-turns 150 \
