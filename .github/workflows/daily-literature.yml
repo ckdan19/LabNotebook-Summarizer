@@ -180,9 +180,23 @@ jobs:
         run: |
           set -o pipefail
           ALLOWED="Skill,Read,Write,Edit,Glob,Grep"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/publish_digest.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # One rule for every python3 invocation, deliberately.
+          #
+          # The per-script rules this replaces (fetch_lab_posts.py,
+          # publish_digest.py) were prefix matches, and a prefix match is
+          # defeated by anything the model wraps around the command — a
+          # redirect, a pipe, a leading `cd`. When that happens the CLI falls
+          # through to an interactive approval prompt that nothing in CI can
+          # answer, so the agent stalls, exits, and the job goes green having
+          # published nothing. That is what silently killed every scheduled run
+          # between 2026-08-25 and 2026-09-01.
+          #
+          # Narrowing does not actually contain anything here: `python3 -c` was
+          # already on the list, which is arbitrary code execution by another
+          # name. The per-script rules bought no safety and cost the whole
+          # pipeline. The real containment is that this step never sees
+          # GITHUB_TOKEN (see the step comment above).
+          ALLOWED="$ALLOWED,Bash(python3:*)"
           # Broad on purpose: literature-connector builds its PubMed and
           # Europe PMC URLs at run time, so no prefix rule matches.
           ALLOWED="$ALLOWED,Bash(curl:*)"
@@ -198,6 +212,51 @@ jobs:
             --output-format text \
             --allowedTools "$ALLOWED" \
             2>&1 | tee "$RUNNER_TEMP/daily-run.log"
+
+      # ---------------------------------------------------------------------
+      # Did the agent actually get to do its job?
+      #
+      # "Nothing qualified today" and "the agent was blocked on a permission
+      # prompt and gave up" produce an identical green run. They are not the
+      # same thing, and conflating them let this workflow rot for a week behind
+      # passing checks. A blocked agent has a tell: it asks, in prose, to be
+      # approved. Treat that as the failure it is.
+      #
+      # This runs as its own step rather than inside the run above so a match
+      # fails the job even though `claude -p` itself exited 0.
+      # ---------------------------------------------------------------------
+      - name: Assert the agent was not blocked
+        if: steps.run_skill.outcome == 'success'
+        run: |
+          log="$RUNNER_TEMP/daily-run.log"
+          [ -f "$log" ] || { echo "::error::No run log at $log — the skill step produced no output."; exit 1; }
+
+          # Case-insensitive. These phrasings are not stable across CLI
+          # versions, which is why the check is a broad grep for the shape of
+          # the request ("approve ... permission", "needs ... approval") rather
+          # than one exact sentence.
+          pattern='needs? (your |manual )?approval|approve the (pending )?(tool call|permission)|permission prompt|requires? permission to run'
+          if grep -qiE "$pattern" "$log"; then
+            echo "::error::The agent stopped to ask for tool approval, which nothing can" \
+                 "grant in CI, so it exited without publishing. This is a broken run, not" \
+                 "a quiet day. Check --allowedTools against the command the skill actually" \
+                 "ran; the offending line follows."
+            grep -inE "$pattern" "$log" >&2
+            exit 1
+          fi
+
+          # An empty log means the agent produced no final message at all —
+          # a crash or a max-turns cutoff, never a real "nothing qualified".
+          #
+          # There is no positive assertion to make beyond this: --output-format
+          # text logs only the agent's closing message, not the tool calls, so
+          # the log of a successful run contains no trace of fetch_lab_posts.py
+          # to grep for. Do not add one back without switching the output format.
+          if [ ! -s "$log" ]; then
+            echo "::error::The agent produced no output. It did not finish — treat this" \
+                 "as a failed run, not a quiet day."
+            exit 1
+          fi
 
       # Did a publish actually happen? Read it from the state file rather than
       # parsing the log, so the answer is deterministic. This drives how loud

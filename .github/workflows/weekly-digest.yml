@@ -106,9 +106,13 @@ jobs:
           set -o pipefail
           # Built up in pieces so every line stays indented inside this block.
           ALLOWED="Task,Agent,Skill,Read,Write,Edit,Glob,Grep"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_github_notebook.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # One rule for every python3 invocation — same reasoning as the daily
+          # workflow. A per-script prefix rule is defeated by a redirect, a
+          # pipe, or a leading `cd`, and the fall-through is an approval prompt
+          # nothing in CI can answer. `python3 -c` was already allowed, so the
+          # narrower rules were not containing anything. This step holds no
+          # credentials, which is what keeps the rule acceptable.
+          ALLOWED="$ALLOWED,Bash(python3:*)"
           # Broad on purpose: literature-connector shells out to curl for
           # PubMed and Europe PMC and the URLs are built at run time. This step
           # holds no credentials, which is what keeps the rule acceptable.
@@ -125,6 +129,24 @@ jobs:
             --output-format text \
             --allowedTools "$ALLOWED" \
             2>&1 | tee "$RUNNER_TEMP/digest-run.log"
+
+      # An agent that stopped to ask for tool approval produced nothing, and the
+      # "no change under digests/" check below would blame the fetch or the
+      # window for it. Name the real cause first so the artifact does not have
+      # to be read by hand.
+      - name: Assert the agent was not blocked
+        run: |
+          log="$RUNNER_TEMP/digest-run.log"
+          [ -f "$log" ] || { echo "::error::No run log at $log — the digest step produced no output."; exit 1; }
+          pattern='needs? (your |manual )?approval|approve the (pending )?(tool call|permission)|permission prompt|requires? permission to run'
+          if grep -qiE "$pattern" "$log"; then
+            echo "::error::The agent stopped to ask for tool approval, which nothing can" \
+                 "grant in CI, so it exited without producing a digest. Check" \
+                 "--allowedTools against the command the skill actually ran; the" \
+                 "offending line follows."
+            grep -inE "$pattern" "$log" >&2
+            exit 1
+          fi
 
       - name: Confirm a digest was produced
         run: |
