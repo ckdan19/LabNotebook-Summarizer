@@ -4,7 +4,7 @@ A tool that summarizes lab notebook posts from [Roberts Lab](https://robertslab.
 
 ## Overview
 
-LabNotebook-Summarizer aggregates posts from five different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes (including multi-week arcs found by looking back through the lab's own archive), and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a small set of Python helper scripts. It also keeps a searchable local archive of every post the five notebooks have ever published, can narrate a digest to audio, and can publish to WordPress.
+LabNotebook-Summarizer aggregates posts from six different lab notebook sources, produces structured Markdown digests, detects cross-notebook patterns and shared themes (including multi-week arcs found by looking back through the lab's own archive), and connects findings to recent PubMed and bioRxiv papers — all using Claude Code skills and a small set of Python helper scripts. It also keeps a searchable local archive of every post the six notebooks have ever published, can narrate a digest to audio, and can publish to WordPress.
 
 ## For Claude Desktop / GUI Users
 
@@ -23,11 +23,11 @@ Then just type a request in the chat box.
 
 ### What you can ask
 
-**Get the full weekly digest** — the main thing this tool does. Runs all five notebooks in parallel, then adds cross-notebook patterns and literature connections.
+**Get the full weekly digest** — the main thing this tool does. Runs all six notebooks in parallel, then adds cross-notebook patterns and literature connections.
 
 > "Give me the full lab digest for this week"
 >
-> "Summarize all five lab notebooks and save the digest"
+> "Summarize all six lab notebooks and save the digest"
 
 **Check one notebook** — faster when you only care about one person.
 
@@ -36,6 +36,8 @@ Then just type a request in the chat box.
 > "What did Sam post recently?"
 >
 > "Summarize recent Grace Crandall posts"
+>
+> "What's new in Megan's notebook?"
 >
 > "What's new in tumbling-oysters?"
 >
@@ -67,7 +69,7 @@ This one needs two things from you: the **topic** to search, and the **specific 
 >
 > "Do the daily lit post"
 
-**Search the whole lab archive** — not just the digests, but every post the five notebooks have ever published, full-text. Answers come grouped by researcher with a source link for every claim.
+**Search the whole lab archive** — not just the digests, but every post the six notebooks have ever published, full-text. Answers come grouped by researcher with a source link for every claim.
 
 > "Has anyone in the lab done DNA methylation analysis on oysters?"
 >
@@ -89,7 +91,7 @@ The archive lives in a local SQLite database that you build (and periodically re
 
 ### What to expect
 
-- A full digest launches five subagents at once and takes a few minutes. Claude will show them running in parallel — that's normal.
+- A full digest launches six subagents at once and takes a few minutes. Claude will show them running in parallel — that's normal.
 - Digests are written to `digests/` as Markdown. Ask Claude to show you the file if you'd rather read it in the chat.
 - **A post is only ever written up once.** The full digest records every post URL it covers in `digests/.digest-state.json`, so a post that still falls inside the requested window but appeared in an earlier digest is skipped rather than repeated. That file is committed to the repo so the de-duplication holds across machines and collaborators. If you *want* a post covered again, ask Claude to remove its URL from the state file.
 - A source with no posts that week is reported as "no activity" rather than silently dropped.
@@ -106,9 +108,9 @@ LabNotebook-Summarizer/
 │   ├── skills/              # full-lab-digest, weekly-lab-digest, daily-literature-post,
 │   │                        #   literature-connector, lab-archive, digest-index,
 │   │                        #   wordpress-publisher, digest-audio, digest-audio-publish
-│   ├── agents/              # One subagent per notebook source (five total)
+│   ├── agents/              # One subagent per notebook source (six total)
 │   └── shared/
-│       └── notebook-digest-format.md  # Output contract shared by the four GitHub agents
+│       └── notebook-digest-format.md  # Output contract shared by the five GitHub agents
 ├── scripts/
 │   ├── fetch_github_notebook.py  # Fetches posts changed in the last N days from a GitHub notebook
 │   ├── fetch_lab_posts.py   # Fetches posts from genefish.wordpress.com via WordPress REST API
@@ -136,15 +138,16 @@ LabNotebook-Summarizer/
 
 ## Data Sources
 
-The tool currently monitors five notebook sources:
+The tool currently monitors six notebook sources:
 
-| Source | Platform | Location |
-|---|---|---|
-| Tumbling Oysters (Steven Roberts) | GitHub | [sr320/tumbling-oysters](https://github.com/sr320/tumbling-oysters) |
-| Ariana Huffmyer Lab Notebook | GitHub | [AHuffmyer/ahuffmyer.github.io](https://github.com/AHuffmyer/ahuffmyer.github.io) |
-| Sam's Notebook (Sam White) | GitHub | [RobertsLab/sams-notebook](https://github.com/RobertsLab/sams-notebook) |
-| Grace Crandall's Notebook | GitHub | [grace-ac/grace-ac.github.io](https://github.com/grace-ac/grace-ac.github.io) |
-| Genefish WordPress | WordPress | [genefish.wordpress.com](https://genefish.wordpress.com) |
+| Source | Platform | Location | Subagent |
+|---|---|---|---|
+| Tumbling Oysters (Steven Roberts) | GitHub | [sr320/tumbling-oysters](https://github.com/sr320/tumbling-oysters) | `tumbling-oysters-agent` |
+| Ariana Huffmyer Lab Notebook | GitHub | [AHuffmyer/ahuffmyer.github.io](https://github.com/AHuffmyer/ahuffmyer.github.io) | `ariana-notebook-agent` |
+| Sam's Notebook (Sam White) | GitHub | [RobertsLab/sams-notebook](https://github.com/RobertsLab/sams-notebook) | `sams-notebook-agent` |
+| Grace Crandall's Notebook | GitHub | [grace-ac/grace-ac.github.io](https://github.com/grace-ac/grace-ac.github.io) | `grace-notebook-agent` |
+| Megan Ewing's Notebook | GitHub | [meganewing/mewing-notebook](https://github.com/meganewing/mewing-notebook) | `megan-notebook-agent` |
+| Genefish WordPress | WordPress | [genefish.wordpress.com](https://genefish.wordpress.com) | `wordpress-agent` |
 
 Adding another GitHub-hosted notebook is a documented, eleven-file procedure — see
 [docs/adding-a-notebook.md](docs/adding-a-notebook.md).
@@ -153,10 +156,10 @@ Adding another GitHub-hosted notebook is a documented, eleven-file procedure —
 
 ### `scripts/fetch_github_notebook.py`
 
-Returns JSON describing every notebook post changed in the last 7 days — or any window, via `--days` — in one of the four GitHub-hosted notebooks, for use by the notebook subagents:
+Returns JSON describing every notebook post changed in the last 7 days — or any window, via `--days` — in one of the five GitHub-hosted notebooks, for use by the notebook subagents:
 
 ```bash
-python3 scripts/fetch_github_notebook.py --notebook sams        # or: ariana, grace, tumbling-oysters
+python3 scripts/fetch_github_notebook.py --notebook sams        # or: ariana, grace, megan, tumbling-oysters
 python3 scripts/fetch_github_notebook.py --notebook grace --days 21
 ```
 
@@ -165,12 +168,12 @@ Each post carries its `content`, `status`, diff line counts, and a `change_class
 Three design points keep this fast and correct:
 
 - **Two API calls locate everything.** A commit listing plus a single `compare` over the whole range replaces one API call per commit.
-- **Post bodies are read at the commit SHA**, not off a branch name. `sams-notebook` and `grace-ac.github.io` default to `master` while the other two use `main`; reading at the SHA sidesteps that difference entirely.
+- **Post bodies are read at the commit SHA**, not off a branch name. `sams-notebook` and `grace-ac.github.io` default to `master` while the other three use `main`; reading at the SHA sidesteps that difference entirely.
 - **Long posts are clipped from the middle**, never the end, so front matter and conclusions both survive. A `content_truncated` flag and a warning mark any post this affected.
 
-Options: `--notebook` (required: `ariana`, `grace`, `sams`, `tumbling-oysters`), `--days` (7), `--cosmetic-lines` (6 — the changed-line threshold below which a modified post counts as cosmetic), `--max-chars` (60000 — per-post content cap), `--cosmetic-max-chars` (4000 — tighter cap for cosmetic edits), `--file-dates` (fetch per-file commit dates, one extra API call per post), `--timeout` (20).
+Options: `--notebook` (required: `ariana`, `grace`, `megan`, `sams`, `tumbling-oysters`), `--days` (7), `--cosmetic-lines` (6 — the changed-line threshold below which a modified post counts as cosmetic), `--max-chars` (60000 — per-post content cap), `--cosmetic-max-chars` (4000 — tighter cap for cosmetic edits), `--file-dates` (fetch per-file commit dates, one extra API call per post), `--timeout` (20).
 
-Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API rate limit from 60 to 5,000 requests per hour. Without it a full five-source digest run consumes roughly 10 of the 60 available calls. An exhausted limit produces a single actionable error rather than a partial digest.
+Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API rate limit from 60 to 5,000 requests per hour. Without it a full six-source digest run consumes roughly 10 of the 60 available calls. An exhausted limit produces a single actionable error rather than a partial digest.
 
 ### `scripts/fetch_lab_posts.py`
 
@@ -211,13 +214,13 @@ Not a command-line tool — a pure helper module (no network, no globals) holdin
 Walks each source's **entire** history — not the 7-day window the live fetchers use — into a local SQLite database at `.cache/archive.db` with an FTS5 full-text index, so the `lab-archive` skill can search everything the labs have ever published. The database is git-ignored; each clone builds its own.
 
 ```bash
-python3 scripts/build_archive.py                          # all five sources
+python3 scripts/build_archive.py                          # all six sources
 python3 scripts/build_archive.py --sources sams grace     # a subset
 ```
 
-The build is **incremental and resumable**. For the four GitHub notebooks it lists a repo's whole posts tree in a single git-tree call and compares each file's blob SHA against what is already stored, so unchanged posts are skipped without re-fetching. Every processed post is committed as it goes, so an interrupted run — a dropped connection, an exhausted rate limit — simply resumes on the next invocation. The WordPress notebook has no blob SHA, so it is deduplicated by URL instead. Re-run it whenever you want the archive current.
+The build is **incremental and resumable**. For the five GitHub notebooks it lists a repo's whole posts tree in a single git-tree call and compares each file's blob SHA against what is already stored, so unchanged posts are skipped without re-fetching. Every processed post is committed as it goes, so an interrupted run — a dropped connection, an exhausted rate limit — simply resumes on the next invocation. The WordPress notebook has no blob SHA, so it is deduplicated by URL instead. Re-run it whenever you want the archive current.
 
-Options: `--sources` (default: all five — `tumbling-oysters`, `grace`, `ariana`, `sams`, `wordpress`). A first full build makes a lot of GitHub API calls; set `GITHUB_TOKEN` before running it.
+Options: `--sources` (default: all six — `megan`, `tumbling-oysters`, `grace`, `ariana`, `sams`, `wordpress`). A first full build makes a lot of GitHub API calls; set `GITHUB_TOKEN` before running it.
 
 ### `scripts/publish_digest.py`
 
@@ -274,19 +277,19 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 
 | Skill | Description |
 |---|---|
-| `full-lab-digest` | Runs all five source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis, multi-week **Historical Connections** drawn from the local archive, a consolidated **Data & Figures** section, and literature connections |
+| `full-lab-digest` | Runs all six source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis, multi-week **Historical Connections** drawn from the local archive, a consolidated **Data & Figures** section, and literature connections |
 | `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
 | `daily-literature-post` | Narrow daily counterpart to `full-lab-digest`: keeps only the last day's posts that describe a real scientific finding, runs `literature-connector` on each, and publishes one combined post. Publishes **live** only when authorized (see below); draft otherwise |
 | `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
-| `lab-archive` | Answers "has anyone done X before" by full-text-searching `.cache/archive.db` — every post the five notebooks have ever published — and reports grouped by researcher with a source link per claim. Read-only; it never builds the database. `full-lab-digest` reads the same database, the same way, for its Historical Connections section |
+| `lab-archive` | Answers "has anyone done X before" by full-text-searching `.cache/archive.db` — every post the six notebooks have ever published — and reports grouped by researcher with a source link per claim. Read-only; it never builds the database. `full-lab-digest` reads the same database, the same way, for its Historical Connections section |
 | `digest-index` | Regenerates `digests/README.md` from scratch as a newest-first index of every digest |
 | `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
 | `digest-audio` | Generates an audio version of a completed digest with Kokoro or Chatterbox-Nano |
 | `digest-audio-publish` | End-to-end: narrates the latest full digest in two editions, uploads the WAVs to the WP media library, and publishes a **new, separate** live post linking to them and back to the digest |
 
-Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all five.
+Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, `megan-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all six.
 
-### What the full digest adds on top of the five summaries
+### What the full digest adds on top of the six summaries
 
 Beyond pasting each subagent's summary verbatim, `full-lab-digest` derives three sections from the compiled material. All three are conservative by design: each is omitted rather than padded when there is nothing real to report.
 
@@ -323,7 +326,7 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 - **`tumbling-oysters-YYYY-MM-DD.md`** — Focused digests for Steven Roberts' Tumbling Oysters notebook
 - **`daily-literature-YYYY-MM-DD.md`** — Daily literature-connection posts from `daily-literature-post`: only the day's genuine findings, each paired with recent papers
 - **`full-lab-digest-YYYY-MM-DD-Nd.md`** — Full multi-source digests, named by end date and window length (`-7d` by default). Files predating this convention omit the `-Nd` suffix. Each includes:
-  - Per-notebook summaries (all five sources)
+  - Per-notebook summaries (all six sources)
   - Cross-notebook pattern detection (shared species, assays, and themes), including a **Historical Connections** subsection that reaches back into the archive for multi-week story arcs
   - A **Data & Figures** section consolidating the window's figure and data links by source
   - Literature connections via PubMed and bioRxiv
