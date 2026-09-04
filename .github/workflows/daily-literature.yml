@@ -342,7 +342,15 @@ jobs:
             echo "No state or digest changes to commit."
             exit 0
           fi
-          git commit -q -m "Add daily literature post ($(date +%Y-%m-%d))"
+          # The message must match what actually happened. A no-publish run still
+          # commits a state change (last_run_date, connected_urls, deferred_urls),
+          # and labelling that "Add daily literature post" sends anyone reading the
+          # git log hunting for a digests/*.md file that was never written.
+          if [ "$PUBLISHED" = "true" ]; then
+            git commit -q -m "Add daily literature post ($(date +%Y-%m-%d))"
+          else
+            git commit -q -m "Record literature run, no post ($(date +%Y-%m-%d))"
+          fi
 
           for attempt in 1 2 3; do
             if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
