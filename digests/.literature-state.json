@@ -5,8 +5,13 @@
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
     "https://genefish.wordpress.com/2026/08/21/tank-room-and-survival-assays-2/",
-    "https://genefish.wordpress.com/2026/09/01/next-steps-for-thesis-project/",
-    "https://genefish.wordpress.com/2026/09/02/prelim-data-analysis-we-have/"
+    "https://genefish.wordpress.com/2026/09/01/next-steps-for-thesis-project/"
+  ],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/09/02/prelim-data-analysis-we-have/",
+      "first_deferred": "2026-09-03"
+    }
   ],
   "publish_log": [
     {

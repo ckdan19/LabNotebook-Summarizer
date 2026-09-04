@@ -25,18 +25,24 @@ This skill keeps persistent state in `digests/.literature-state.json` (path rela
   "connected_urls": [
     "https://genefish.wordpress.com/2026/08/09/some-real-finding/"
   ],
+  "deferred_urls": [
+    {"url": "https://genefish.wordpress.com/2026/08/09/a-finding-with-no-hits/", "first_deferred": "2026-08-10"}
+  ],
   "publish_log": [
     {"date": "2026-08-10", "status": "draft", "url": "https://genefish.wordpress.com/?p=123"}
   ]
 }
 ```
 
-`connected_urls` is the set of every post URL this skill has already processed (turned into a literature section) in any previous run. It is committed to the repo — **never** add it to `.gitignore` — so de-duplication works across machines and collaborators.
+`connected_urls` is the set of every post URL this skill has finished with — either it produced a literature section, or it was evaluated twice and yielded nothing both times. It is committed to the repo — **never** add it to `.gitignore` — so de-duplication works across machines and collaborators.
+
+`deferred_urls` holds posts that carried a real finding but whose `literature-connector` search came back empty on their **first** evaluation. An empty search is not the same as an absent finding: a narrow topic against `literature-connector`'s 12-month recency window can return zero for a result that is genuinely connectable, and indexing lags mean the same query can hit a day later. Each entry records the `url` and the `first_deferred` date. A deferred post gets exactly **one** more evaluation (step 2), after which it moves to `connected_urls` whatever the outcome — so no post is evaluated more than twice, ever.
 
 `publish_log` records every post this skill has published, one entry per publish, each with the `date` (YYYY-MM-DD) it was published, the `status` it was published with (`"draft"` or `"publish"`), and the resulting post `url`. It drives the **one-post-per-day cap** (step 7): the number of entries whose `date` equals today is the count of posts already published today.
 
-- **If the file does not exist** (first run): treat `connected_urls` as an empty set and `publish_log` as an empty list, exclude nothing on that basis, and create the file in the state-update step below.
+- **If the file does not exist** (first run): treat `connected_urls` as an empty set and `publish_log` and `deferred_urls` as empty lists, exclude nothing on that basis, and create the file in the state-update step below.
 - **If `publish_log` is missing from an older state file:** treat it as an empty list (no publishes recorded yet) and add it when you next write the file.
+- **If `deferred_urls` is missing from an older state file:** treat it as an empty list and add it when you next write the file.
 - Match on the canonical post URL only. Treat URLs that differ solely by a trailing slash as the same URL.
 
 ## Steps
@@ -80,7 +86,9 @@ Parse the JSON `posts` array. Each post has `author`, `date`, `title`, `url`, `c
 
 ### 2. Exclude already-processed posts (state file)
 
-Read `digests/.literature-state.json` (see above). Drop any fetched post whose canonical `url` is already in `connected_urls`. These have been connected in a previous run and must not be processed again.
+Read `digests/.literature-state.json` (see above). Drop any fetched post whose canonical `url` is already in `connected_urls`. These are finished with and must not be processed again.
+
+**Do not drop posts listed in `deferred_urls`.** These carried a real finding but returned no literature on their first pass, and are being given their one retry. Keep them in the candidate set and carry them through steps 3–5 as normal; note which ones they are, because step 8 treats their outcome differently. A deferred post is only reachable while it still falls inside the fetch window from step 1 — if the window has moved past it, it simply never comes back, and step 8 retires it.
 
 ### 3. Exclude automated pipeline output (this skill's and full-lab-digest's)
 
@@ -114,9 +122,11 @@ Then invoke the `literature-connector` skill exactly as if the user had typed:
 
 Run these searches **sequentially, not in parallel**, to avoid hitting the PubMed / Europe PMC rate limits. All of `literature-connector`'s constraints carry over unchanged — most importantly the no-hallucination-on-failed-fetch rule: a paper appears only if its abstract was successfully retrieved.
 
-**Per-post inclusion rule:** a post's section is included in the assembled post **only if** `literature-connector` returns at least one relevant paper whose abstract was successfully retrieved. If a post yields no relevant literature, omit that post's section entirely (do not write a placeholder) — but the post is still recorded as processed in the state file (step 8), since it was genuinely evaluated.
+**Per-post inclusion rule:** a post's section is included in the assembled post **only if** `literature-connector` returns at least one relevant paper whose abstract was successfully retrieved. If a post yields no relevant literature, omit that post's section entirely (do not write a placeholder) — but the post is still recorded in the state file (step 8), since it was genuinely evaluated.
 
-If, after all searches, **no** post yielded any relevant literature, produce no post (nothing to publish), but still record the processed URLs in the state file per step 8, and report that nothing qualified.
+Track, for each post evaluated this run, whether it **hit** (at least one relevant paper) or **missed** (zero). Step 8 needs the hit/miss split alongside the deferred/first-pass split from step 2.
+
+If, after all searches, **no** post yielded any relevant literature, produce no post (nothing to publish), but still update the state file per step 8, and report that nothing qualified.
 
 ### 6. Assemble the Markdown post
 
@@ -186,14 +196,23 @@ Confirm the command returned an HTTP 200/201 and a URL before proceeding, and no
 
 ### 8. Update the state file
 
-After a successful publish, update `digests/.literature-state.json`:
+Update `digests/.literature-state.json` whenever step 5 evaluated at least one post — **whether or not anything was published.** A run that published nothing still learned something (which posts were evaluated, which came back empty) and must record it.
 
 - Set `last_run_date` to today's date (YYYY-MM-DD).
-- Add every post URL **processed this run** to `connected_urls` (union — keep all existing entries, append the new ones, no duplicates). "Processed" means every post that survived steps 2–4 and was evaluated by `literature-connector` in step 5 — **including** posts whose section was omitted for lack of relevant literature. This ensures a logistical-free post with no literature hits is not re-evaluated tomorrow.
-- **Append one entry to `publish_log`** recording this publish: `{"date": "<today>", "status": "<publish|draft>", "url": "<the URL publish_digest.py returned>"}`. Use the actual `post_status` from the publish output for `status`. This entry is what the step 7a cap reads tomorrow — and, if the skill is somehow triggered again today, what makes 7a refuse a second post.
+- Route every post evaluated by `literature-connector` in step 5 to exactly one of `connected_urls` or `deferred_urls`, by its hit/miss result and whether it was already deferred:
+
+  | | **Hit** (>=1 relevant paper) | **Miss** (zero) |
+  |---|---|---|
+  | **First evaluation** | `connected_urls` | `deferred_urls`, `first_deferred` = today |
+  | **Retry** (was in `deferred_urls`) | `connected_urls`, remove from `deferred_urls` | `connected_urls`, remove from `deferred_urls` |
+
+  Both `connected_urls` and `deferred_urls` are unions over their existing contents — keep all entries not touched this run, no duplicates. A URL must never appear in both lists; adding to one always means removing from the other.
+
+- **Retire stale deferrals.** Any `deferred_urls` entry whose `first_deferred` is more than 14 days before today has aged out of every plausible fetch window and will never be re-fetched. Move it to `connected_urls` and drop it from `deferred_urls`, so the list cannot grow without bound.
+- **If a post was published,** append one entry to `publish_log` recording it: `{"date": "<today>", "status": "<publish|draft>", "url": "<the URL publish_digest.py returned>"}`. Use the actual `post_status` from the publish output for `status`. This entry is what the step 7a cap reads tomorrow — and, if the skill is somehow triggered again today, what makes 7a refuse a second post. If nothing was published, leave `publish_log` untouched.
 - Do not add posts excluded in steps 2–4 as logistical/already-processed/own-output (already-processed ones are already present; logistical and own-output ones were never real candidates).
-- If the file did not exist, create it now with `last_run_date` = today, `connected_urls` = the processed URLs, and `publish_log` = a list containing the single entry for this publish.
-- Write valid JSON with the same three top-level keys (`last_run_date`, `connected_urls`, `publish_log`). Keep the file committed — never gitignore it.
+- If the file did not exist, create it now with `last_run_date` = today, `connected_urls` and `deferred_urls` filled per the table above, and `publish_log` = a list containing the single entry for this publish.
+- Write valid JSON with the same four top-level keys (`last_run_date`, `connected_urls`, `deferred_urls`, `publish_log`). Keep the file committed — never gitignore it.
 
 ### 9. Report back
 
