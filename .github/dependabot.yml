@@ -1,0 +1,22 @@
+# Keeps the third-party GitHub Actions in .github/workflows/ current.
+#
+# Only the `github-actions` ecosystem is watched. The other moving dependency —
+# the @anthropic-ai/claude-code CLI installed with `npm install -g` in the agent
+# workflows — has no package.json for Dependabot to read, so bumping that pin
+# stays a manual step (see the comment above each "Install Claude Code" step).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    # One PR per bump is noisy for a repo this size; batch them.
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: "ci"
