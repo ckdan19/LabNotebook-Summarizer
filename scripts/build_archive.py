@@ -35,7 +35,7 @@ from urllib.parse import quote
 # because this script lives alongside them in scripts/ (sys.path[0]).
 from fetch_github_notebook import API, NOTEBOOKS, get_json, headers, rate_limit_message
 from fetch_lab_posts import DEFAULT_SITE, collect_posts
-from notebook_parsing import derive_permalink, parse_front_matter
+from notebook_parsing import derive_permalink, normalize_date, parse_front_matter
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / ".cache" / "archive.db"
@@ -340,6 +340,34 @@ def process_wordpress_source(conn: sqlite3.Connection, counts: dict) -> list:
 # Summary / main
 # ---------------------------------------------------------------------------
 
+_ISO_DATE_GLOB = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+
+
+def renormalize_dates(conn: sqlite3.Connection) -> int:
+    """Rewrite any stored `date` that is not already `YYYY-MM-DD`.
+
+    New posts arrive normalised via parse_front_matter, but a post already in the
+    archive is skipped on every later run as long as its blob SHA is unchanged, so
+    a row stored before normalisation existed would keep its raw front-matter
+    string forever. Until 2026-09 that was 90 of 108 tumbling-oysters posts and
+    most of Megan's, all `MM-DD-YYYY`, none of which could ever match the
+    `date BETWEEN` filter the Historical Connections query uses. This pass runs
+    every time and is a no-op once the archive is clean. Returns rows changed.
+    """
+    rows = conn.execute(
+        "SELECT id, date, path FROM posts WHERE date IS NULL OR date NOT GLOB ?",
+        (_ISO_DATE_GLOB,),
+    ).fetchall()
+    changed = 0
+    for row_id, raw, path in rows:
+        fixed = normalize_date(raw) or (_fallback_date(path) if path else None)
+        if fixed != raw:
+            conn.execute("UPDATE posts SET date = ? WHERE id = ?", (fixed, row_id))
+            changed += 1
+    conn.commit()
+    return changed
+
+
 def mark_shadowed(conn: sqlite3.Connection, sources: list) -> None:
     """Recompute the `shadowed` flag for the given sources.
 
@@ -436,6 +464,10 @@ def main() -> None:
     # Recompute URL-collision flags for whatever we touched (safe after an
     # interruption too — it only reflects rows already committed).
     mark_shadowed(conn, args.sources)
+
+    fixed_dates = renormalize_dates(conn)
+    if fixed_dates:
+        print(f"\nNormalised {fixed_dates} stored date(s) to YYYY-MM-DD.")
 
     if warnings:
         print("\nWarnings:")
