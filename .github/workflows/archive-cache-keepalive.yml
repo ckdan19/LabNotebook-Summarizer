@@ -1,0 +1,52 @@
+name: archive-cache-keepalive
+
+# Keeps the weekly digest's post-archive cache alive between runs.
+#
+# weekly-digest.yml stores .cache/archive.db in the Actions cache so that
+# build_archive.py can refresh it incrementally instead of rebuilding from
+# scratch. GitHub evicts any cache entry that has not been ACCESSED for 7 days,
+# and the weekly digest runs every 7 days — so the cache expired roughly one
+# hour before every Monday run ever looked for it. Confirmed in the logs: the
+# 2026-08-24 run saved archive-db-32769476086, and the 2026-08-31 run reported
+# "Cache not found" and rebuilt the whole archive (17-23 minutes against a
+# 25-minute step timeout).
+#
+# A restore counts as an access and resets the 7-day clock. This job does only
+# that: restore, never save. Running it Thursday splits the week so the cache is
+# never more than ~3.5 days stale when either job looks for it.
+on:
+  schedule:
+    # Thursday 15:00 UTC — mid-way between the Monday 15:00 UTC weekly runs.
+    - cron: "0 15 * * 4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  touch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Restore only — a save would just duplicate the entry under a new key.
+      # The restore key must match weekly-digest.yml's `restore-keys` prefix
+      # exactly, or this touches nothing.
+      - name: Touch post archive cache
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/archive.db
+          key: archive-db-keepalive-${{ github.run_id }}
+          restore-keys: archive-db-
+
+      - name: Report
+        env:
+          HIT: ${{ steps.restore.outputs.cache-matched-key }}
+        run: |
+          if [ -n "$HIT" ]; then
+            echo "::notice::Touched cache entry '$HIT' — its 7-day eviction clock is reset."
+          else
+            echo "::warning::No archive-db-* cache entry exists to keep alive. The next" \
+                 "weekly digest will rebuild the archive from scratch and save a new one;" \
+                 "this job will start keeping that one alive."
+          fi
