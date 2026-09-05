@@ -51,7 +51,7 @@ jobs:
       # quote the same number.
       DAYS: ${{ inputs.days || '3' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # A bad `days` reaches the skill as prose inside a prompt, where a typo
       # would be interpreted rather than rejected. Fail on it here instead.
@@ -70,7 +70,7 @@ jobs:
           fi
           echo "::notice::Window: last $DAYS day(s)."
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -79,7 +79,7 @@ jobs:
       - name: Install Markdown converter
         run: python -m pip install --quiet markdown
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
@@ -403,7 +403,7 @@ jobs:
 
       - name: Upload run log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daily-run-log
           path: ${{ runner.temp }}/daily-run.log
