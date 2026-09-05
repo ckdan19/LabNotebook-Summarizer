@@ -171,9 +171,41 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Add weekly lab digest ($(date -u +%Y-%m-%d), ${DAYS:-7}d window)"
-          # Rebase before pushing so a human commit landing mid-run is not lost.
-          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          # Rebase before pushing so a human commit landing mid-run is not
+          # lost, and retry — the daily workflow can land its own state commit
+          # on main while this 15-20 minute job is running, which makes a
+          # first-try push rejection routine rather than exceptional. Same
+          # loop as daily-literature.yml, including the rebase-abort: a pull
+          # that hits a content conflict leaves the rebase in progress and
+          # every later attempt would fail on "rebase already in progress".
+          conflicted=false
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Pushed on attempt ${attempt}."
+              exit 0
+            fi
+            if git rebase --abort 2>/dev/null; then
+              conflicted=true
+              echo "::warning::Rebase onto origin/${GITHUB_REF_NAME} conflicted on" \
+                   "attempt ${attempt}; aborted it before retrying."
+            fi
+            sleep $((attempt * 5))
+          done
+
+          if [ "$conflicted" = "true" ]; then
+            echo "::error::The digest commit conflicts with a change already on" \
+                 "${GITHUB_REF_NAME} — most likely a hand edit to" \
+                 "digests/.digest-state.json made while this run was in flight." \
+                 "Nothing was published (the draft step runs after this one)." \
+                 "Re-running is safe; the state file will be regenerated."
+          else
+            echo "::error::Could not push the digest commit after 3 attempts." \
+                 "Nothing was published (the draft step runs after this one)." \
+                 "Re-running is safe."
+          fi
+          exit 1
         env:
           DAYS: ${{ inputs.days || '7' }}
 

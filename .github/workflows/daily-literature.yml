@@ -359,15 +359,36 @@ jobs:
             git commit -q -m "Record literature run, no post ($(date +%Y-%m-%d))"
           fi
 
+          conflicted=false
           for attempt in 1 2 3; do
             if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
                && git push origin "HEAD:${GITHUB_REF_NAME}"; then
               echo "Pushed on attempt ${attempt}."
               exit 0
             fi
+            # A pull that hits a content conflict leaves the rebase in
+            # progress, and the next attempt's `git pull --rebase` then fails
+            # on "rebase already in progress" — three times, with no useful
+            # message. Abort it so each retry starts clean. A genuine conflict
+            # (someone hand-edited .literature-state.json today) fails again on
+            # its own and is named as such below; `--abort` is a no-op when no
+            # rebase is in progress.
+            if git rebase --abort 2>/dev/null; then
+              conflicted=true
+              echo "::warning::Rebase onto origin/${GITHUB_REF_NAME} conflicted on" \
+                   "attempt ${attempt}; aborted it before retrying."
+            fi
             sleep $((attempt * 5))
           done
 
+          if [ "$conflicted" = "true" ]; then
+            echo "::error::The state commit conflicts with a change already on" \
+                 "${GITHUB_REF_NAME} — most likely a hand edit to" \
+                 "digests/.literature-state.json made while this run was in" \
+                 "flight. Resolve by hand: merge this run's entries into the" \
+                 "committed file (the run log artifact lists what was evaluated" \
+                 "and published)."
+          fi
           if [ "$PUBLISHED" = "true" ] && [ "$STATUS" = "publish" ]; then
             echo "::error::A post was published LIVE but the state commit could not be" \
                  "pushed. digests/.literature-state.json on the default branch does not" \
