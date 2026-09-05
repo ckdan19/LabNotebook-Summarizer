@@ -148,11 +148,11 @@ jobs:
       # Only catches LIVE posts (the public API does not return drafts) — which
       # are exactly the ones where a duplicate actually matters.
       #
-      # Matches on the TITLE prefix, not the category. Posts this skill publishes
-      # with --category auto-literature-connections come back from the WordPress
-      # API as Uncategorized, so the category cannot be trusted here; the H1 the
-      # skill emits in step 6 is deterministic and does survive. The category is
-      # still checked as a second signal in case that is ever fixed.
+      # Matches on the TITLE prefix first, the category second. The H1 the skill
+      # emits in step 6 is deterministic and always survives; the
+      # auto-literature-connections category has applied to every live post
+      # since an admin created it on the site on 2026-08-25, but it depends on
+      # the category continuing to exist there, so it stays the backup signal.
       # ---------------------------------------------------------------------
       - name: Cap check — WordPress
         id: cap_wp
