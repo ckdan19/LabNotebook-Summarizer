@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-09-08",
+  "last_run_date": "2026-09-09",
   "connected_urls": [
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
@@ -10,7 +10,16 @@
     "https://genefish.wordpress.com/2026/09/04/qpcr-results-hsp70-hsp90-atp-synthase/",
     "https://genefish.wordpress.com/2026/09/07/i-just-re-ran-the/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/09/08/09-08-qpcr-results-for-citrate-synthase/",
+      "first_deferred": "2026-09-09"
+    },
+    {
+      "url": "https://genefish.wordpress.com/2026/09/07/round-5-survival-assays/",
+      "first_deferred": "2026-09-09"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
