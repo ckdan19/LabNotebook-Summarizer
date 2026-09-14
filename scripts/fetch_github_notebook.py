@@ -73,6 +73,15 @@ NOTEBOOKS = {
         # `.qmd` broadly rather than pinning to `/index.qmd` like sams.
         "suffix": ".qmd",
     },
+    "kathleen": {
+        "repo": "shedurkin/Roberts-LabNotebook",
+        "prefix": "posts/",
+        # Quarto site organized by research project under `posts/projects/<name>/`
+        # (E5_coral, SIFP_2025, ceasmallr, ...) plus a `posts/daily_logs/` tree.
+        # Posts are flat dated `.qmd` files with a few `index.qmd` folders — same
+        # broad `.qmd` match as megan, which `derive_permalink` also mirrors.
+        "suffix": ".qmd",
+    },
 }
 
 

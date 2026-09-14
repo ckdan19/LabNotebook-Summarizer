@@ -44,7 +44,7 @@ TIMEOUT = 30
 
 # GitHub sources, in ascending size so a partial/interrupted build makes progress
 # on the cheap ones first. Each maps to a NOTEBOOKS entry (repo/prefix/suffix).
-GITHUB_SOURCES = ["megan", "tumbling-oysters", "grace", "ariana", "sams"]
+GITHUB_SOURCES = ["megan", "tumbling-oysters", "grace", "ariana", "kathleen", "sams"]
 WORDPRESS_SOURCE = "wordpress"
 ALL_SOURCES = GITHUB_SOURCES + [WORDPRESS_SOURCE]
 
@@ -56,6 +56,7 @@ DEFAULT_AUTHORS = {
     "tumbling-oysters": "Steven Roberts",
     "grace": "Grace Crandall",
     "ariana": "Ariana Huffmyer",
+    "kathleen": "Kathleen Durkin",
     "sams": "Sam White",
 }
 

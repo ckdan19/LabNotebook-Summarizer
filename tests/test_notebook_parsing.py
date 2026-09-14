@@ -200,6 +200,27 @@ class TestDerivePermalink(unittest.TestCase):
             url, "https://meganewing.github.io/mewing-notebook/posts/welcome/"
         )
 
+    def test_kathleen_project_nested_qmd_becomes_html(self):
+        # shedurkin's Quarto site nests posts under posts/projects/<project>/;
+        # the project grouping is preserved verbatim in the URL, not flattened.
+        url = notebook_parsing.derive_permalink(
+            "kathleen", "posts/projects/E5_coral/2023_11_14_E5_coral.qmd"
+        )
+        self.assertEqual(
+            url,
+            "https://shedurkin.github.io/Roberts-LabNotebook/posts/projects/E5_coral/2023_11_14_E5_coral.html",
+        )
+
+    def test_kathleen_index_qmd_becomes_folder(self):
+        # Same Quarto rule as megan: an index.qmd renders to its folder.
+        url = notebook_parsing.derive_permalink(
+            "kathleen", "posts/daily_logs/2023/September_2023/Sept_28_2023/index.qmd"
+        )
+        self.assertEqual(
+            url,
+            "https://shedurkin.github.io/Roberts-LabNotebook/posts/daily_logs/2023/September_2023/Sept_28_2023/",
+        )
+
     def test_leading_slash_in_path_tolerated(self):
         url = notebook_parsing.derive_permalink(
             "ariana", "/posts/2026-07-01-goals.qmd"

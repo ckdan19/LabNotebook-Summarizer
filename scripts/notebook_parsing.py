@@ -176,12 +176,22 @@ def derive_permalink(source: str, file_path: str) -> str:
       -> https://grace-ac.github.io/slug/   (Jekyll drops the date prefix)
     - sams: `posts/year/date-slug/index.qmd`
       -> https://robertslab.github.io/sams-notebook/posts/year/date-slug/
-    - megan: Quarto site with no fixed folder convention — posts sit at varying
-      depths and folder names (`posts/2026-08/slug.qmd`, `posts/projects/slug.qmd`,
-      `posts/welcome/index.qmd`). Quarto's rule is uniform regardless: an
-      `index.qmd` renders to its folder, any other `.qmd` to a sibling `.html`.
+    - megan / kathleen: Quarto sites with no fixed folder convention — posts sit
+      at varying depths and folder names (`posts/2026-08/slug.qmd`,
+      `posts/projects/E5_coral/slug.qmd`, `posts/welcome/index.qmd`). Quarto's
+      rule is uniform regardless: an `index.qmd` renders to its folder, any other
+      `.qmd` to a sibling `.html`. The only difference between the two is the
+      site's base URL.
       -> https://meganewing.github.io/mewing-notebook/posts/2026-08/slug.html
       -> https://meganewing.github.io/mewing-notebook/posts/welcome/
+      -> https://shedurkin.github.io/Roberts-LabNotebook/posts/projects/E5_coral/slug.html
+
+    kathleen's posts nest one level deeper than megan's under
+    `posts/projects/<project>/` (E5_coral, SIFP_2025, ceasmallr, misc,
+    pacific_cod, pacific_oyster). That grouping is carried through verbatim in
+    the path and therefore in the URL — the permalink is not flattened. Surfacing
+    the project name as separate metadata (if the digest wants to report it) is a
+    concern for the layer that groups posts, not for URL derivation.
     """
     path = file_path.lstrip("/")
 
@@ -193,13 +203,19 @@ def derive_permalink(source: str, file_path: str) -> str:
         if path.endswith(".qmd"):
             path = path[: -len(".qmd")] + ".html"
         return "https://ahuffmyer.github.io/" + path
-    if source == "megan":
-        # index.qmd -> folder/, any other .qmd -> sibling .html. Handling both in
-        # one branch absorbs this notebook's folder-naming variability.
+    # Two Quarto sites share one rule (index.qmd -> folder/, any other .qmd ->
+    # sibling .html) and differ only in base URL. Handling both here absorbs their
+    # folder-naming variability, including kathleen's posts/projects/<project>/
+    # nesting, which the URL preserves rather than flattens.
+    _QUARTO_BASE = {
+        "megan": "https://meganewing.github.io/mewing-notebook/",
+        "kathleen": "https://shedurkin.github.io/Roberts-LabNotebook/",
+    }
+    if source in _QUARTO_BASE:
         path = _strip_index(path)
         if path.endswith(".qmd"):
             path = path[: -len(".qmd")] + ".html"
-        return "https://meganewing.github.io/mewing-notebook/" + path
+        return _QUARTO_BASE[source] + path
     if source == "grace":
         slug = os.path.basename(path)
         if slug.endswith(".md"):
