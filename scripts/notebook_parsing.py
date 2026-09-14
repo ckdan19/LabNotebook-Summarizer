@@ -9,6 +9,7 @@ same classification and body-trimming rules.
 
 import os
 import re
+from datetime import datetime
 
 
 def clip(text: str, limit: int) -> tuple:
@@ -96,6 +97,60 @@ def _parse_inline_list(value: str) -> list:
     return [_strip_quotes(item) for item in value.split(",") if item.strip()]
 
 
+# Front-matter `date:` values are free text and the notebooks disagree on the
+# shape. Surveyed 2026-09-05 against the live repos:
+#   tumbling-oysters  80/108 `12-01-2025`, 6 quoted, 3 `12-1-2025`, 1 `05-14-24`,
+#                     1 `"May 31, 2023"`, 17 ISO
+#   megan             43/50 `"12-01-2025"`, 7 ISO
+#   sams              ISO with a time: `2026-08-01 10:00:00+00:00`, `'2026-08-01 10:00'`
+#   ariana / grace    ISO, plus one literal `YYYY-MM-DD` template placeholder
+# The archive filters on `date BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'` as text, so
+# anything not exactly ISO either never matches (month-first) or matches the wrong
+# window (a trailing time sorts after the end bound). Normalise once, here, so
+# every consumer sees `YYYY-MM-DD` or None.
+_ISO_PREFIX = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)")
+_US_NUMERIC = re.compile(r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$")
+_MONTH_NAME_FORMATS = ("%B %d, %Y", "%b %d, %Y", "%B %d %Y", "%b %d %Y",
+                       "%d %B %Y", "%d %b %Y")
+
+
+def normalize_date(value):
+    """Coerce a front-matter date to `YYYY-MM-DD`, or None if it cannot be read.
+
+    Accepts ISO with or without a trailing time/zone, US month-first numeric dates
+    with 2- or 4-digit years (`12-1-2025`, `05-14-24`; no notebook writes
+    day-first — the survey above found no first field above 12), and English
+    month-name dates. Anything else, including the `YYYY-MM-DD` template
+    placeholder, is None so the caller can fall back to a filename stamp.
+    """
+    if value is None:
+        return None
+    text = str(value).strip().strip("'\"").strip()
+    if not text:
+        return None
+
+    m = _ISO_PREFIX.match(text)
+    if m:
+        y, mo, d = (int(g) for g in m.groups())
+    else:
+        m = _US_NUMERIC.match(text)
+        if m:
+            mo, d, y = (int(g) for g in m.groups())
+            if y < 100:
+                y += 2000
+        else:
+            for fmt in _MONTH_NAME_FORMATS:
+                try:
+                    return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+                except ValueError:
+                    continue
+            return None
+    try:
+        return datetime(y, mo, d).strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
 def parse_front_matter(text: str, default_author: str = None) -> dict:
     """Extract title, author, date, and categories from a `---`-delimited block.
 
@@ -103,7 +158,8 @@ def parse_front_matter(text: str, default_author: str = None) -> dict:
     simple scalars and one-level `categories` lists (inline `[a, b]` or an
     indented `- item` block), so pulling in PyYAML for them would be overkill.
 
-    Returns a dict with keys `title`, `author`, `date`, `categories`. Missing
+    Returns a dict with keys `title`, `author`, `date`, `categories`. `date` is
+    normalised to `YYYY-MM-DD` (see normalize_date). Missing
     scalars come back as `None`; `categories` is always a list. When the block
     has no `author` (Grace's notebook omits it), `default_author` is used.
     """
@@ -150,6 +206,9 @@ def parse_front_matter(text: str, default_author: str = None) -> dict:
                 result["categories"] = cats
         else:
             result[key] = _strip_quotes(value) or None
+
+    # Every consumer compares or sorts on `date` as ISO text; see normalize_date.
+    result["date"] = normalize_date(result["date"])
 
     if not result["author"]:
         result["author"] = default_author

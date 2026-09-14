@@ -43,8 +43,15 @@ jobs:
         with:
           node-version: "22"
 
+      # Pinned to an exact version, for the same reason --model is pinned
+      # below: an unpinned install takes whatever the CLI happens to be on the
+      # day the cron fires. The permission-prompt behaviour that silently
+      # no-opped every run from 2026-08-25 to 2026-09-01 was CLI behaviour,
+      # and the "blocked agent" regex further down greps for prompt phrasings
+      # that are not stable across CLI versions. Bump this deliberately, and
+      # run the workflow by hand once after bumping.
       - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.261
 
       - name: Verify secrets are configured
         env:
@@ -106,9 +113,13 @@ jobs:
           set -o pipefail
           # Built up in pieces so every line stays indented inside this block.
           ALLOWED="Task,Agent,Skill,Read,Write,Edit,Glob,Grep"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_github_notebook.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # One rule for every python3 invocation — same reasoning as the daily
+          # workflow. A per-script prefix rule is defeated by a redirect, a
+          # pipe, or a leading `cd`, and the fall-through is an approval prompt
+          # nothing in CI can answer. `python3 -c` was already allowed, so the
+          # narrower rules were not containing anything. This step holds no
+          # credentials, which is what keeps the rule acceptable.
+          ALLOWED="$ALLOWED,Bash(python3:*)"
           # Broad on purpose: literature-connector shells out to curl for
           # PubMed and Europe PMC and the URLs are built at run time. This step
           # holds no credentials, which is what keeps the rule acceptable.
@@ -126,6 +137,24 @@ jobs:
             --allowedTools "$ALLOWED" \
             2>&1 | tee "$RUNNER_TEMP/digest-run.log"
 
+      # An agent that stopped to ask for tool approval produced nothing, and the
+      # "no change under digests/" check below would blame the fetch or the
+      # window for it. Name the real cause first so the artifact does not have
+      # to be read by hand.
+      - name: Assert the agent was not blocked
+        run: |
+          log="$RUNNER_TEMP/digest-run.log"
+          [ -f "$log" ] || { echo "::error::No run log at $log — the digest step produced no output."; exit 1; }
+          pattern='needs? (your |manual )?approval|approve the (pending )?(tool call|permission)|permission prompt|requires? permission to run'
+          if grep -qiE "$pattern" "$log"; then
+            echo "::error::The agent stopped to ask for tool approval, which nothing can" \
+                 "grant in CI, so it exited without producing a digest. Check" \
+                 "--allowedTools against the command the skill actually ran; the" \
+                 "offending line follows."
+            grep -inE "$pattern" "$log" >&2
+            exit 1
+          fi
+
       - name: Confirm a digest was produced
         run: |
           git add -A digests/
@@ -142,9 +171,41 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Add weekly lab digest ($(date -u +%Y-%m-%d), ${DAYS:-7}d window)"
-          # Rebase before pushing so a human commit landing mid-run is not lost.
-          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          # Rebase before pushing so a human commit landing mid-run is not
+          # lost, and retry — the daily workflow can land its own state commit
+          # on main while this 15-20 minute job is running, which makes a
+          # first-try push rejection routine rather than exceptional. Same
+          # loop as daily-literature.yml, including the rebase-abort: a pull
+          # that hits a content conflict leaves the rebase in progress and
+          # every later attempt would fail on "rebase already in progress".
+          conflicted=false
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Pushed on attempt ${attempt}."
+              exit 0
+            fi
+            if git rebase --abort 2>/dev/null; then
+              conflicted=true
+              echo "::warning::Rebase onto origin/${GITHUB_REF_NAME} conflicted on" \
+                   "attempt ${attempt}; aborted it before retrying."
+            fi
+            sleep $((attempt * 5))
+          done
+
+          if [ "$conflicted" = "true" ]; then
+            echo "::error::The digest commit conflicts with a change already on" \
+                 "${GITHUB_REF_NAME} — most likely a hand edit to" \
+                 "digests/.digest-state.json made while this run was in flight." \
+                 "Nothing was published (the draft step runs after this one)." \
+                 "Re-running is safe; the state file will be regenerated."
+          else
+            echo "::error::Could not push the digest commit after 3 attempts." \
+                 "Nothing was published (the draft step runs after this one)." \
+                 "Re-running is safe."
+          fi
+          exit 1
         env:
           DAYS: ${{ inputs.days || '7' }}
 

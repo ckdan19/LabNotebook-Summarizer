@@ -8,6 +8,48 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import notebook_parsing
 
 
+class TestNormalizeDate(unittest.TestCase):
+    """normalize_date coerces every date shape the five notebooks actually write."""
+
+    def test_iso_passthrough(self):
+        self.assertEqual(notebook_parsing.normalize_date("2026-07-28"), "2026-07-28")
+
+    def test_iso_with_time_and_zone_is_truncated(self):
+        # Sam's notebook: `2026-08-01 10:00:00+00:00` sorts AFTER a bare
+        # `2026-08-01` end bound, so it must lose the time to stay in-window.
+        self.assertEqual(notebook_parsing.normalize_date("2026-08-01 10:00:00+00:00"), "2026-08-01")
+        self.assertEqual(notebook_parsing.normalize_date("'2026-08-01 10:00'"), "2026-08-01")
+        self.assertEqual(notebook_parsing.normalize_date("2026-07-28T09:00:00Z"), "2026-07-28")
+
+    def test_us_month_first_four_digit_year(self):
+        # tumbling-oysters and Megan's notebook: the majority of their posts.
+        self.assertEqual(notebook_parsing.normalize_date("12-01-2025"), "2025-12-01")
+        self.assertEqual(notebook_parsing.normalize_date('"12-01-2025"'), "2025-12-01")
+        self.assertEqual(notebook_parsing.normalize_date("12-1-2025"), "2025-12-01")
+
+    def test_us_month_first_two_digit_year(self):
+        self.assertEqual(notebook_parsing.normalize_date("05-14-24"), "2024-05-14")
+
+    def test_month_name(self):
+        self.assertEqual(notebook_parsing.normalize_date('"May 31, 2023"'), "2023-05-31")
+        self.assertEqual(notebook_parsing.normalize_date("31 May 2023"), "2023-05-31")
+
+    def test_unpadded_iso(self):
+        self.assertEqual(notebook_parsing.normalize_date("2026-8-1"), "2026-08-01")
+
+    def test_template_placeholder_is_none(self):
+        self.assertIsNone(notebook_parsing.normalize_date("YYYY-MM-DD"))
+
+    def test_impossible_dates_are_none(self):
+        self.assertIsNone(notebook_parsing.normalize_date("13-01-2025"))
+        self.assertIsNone(notebook_parsing.normalize_date("2026-02-30"))
+
+    def test_empty_and_none(self):
+        self.assertIsNone(notebook_parsing.normalize_date(""))
+        self.assertIsNone(notebook_parsing.normalize_date("   "))
+        self.assertIsNone(notebook_parsing.normalize_date(None))
+
+
 class TestParseFrontMatter(unittest.TestCase):
     """parse_front_matter pulls title/author/date/categories out of the --- block."""
 
@@ -97,6 +139,16 @@ class TestParseFrontMatter(unittest.TestCase):
         text = "\n\n---\ntitle: Later start\n---\n"
         fm = notebook_parsing.parse_front_matter(text)
         self.assertEqual(fm["title"], "Later start")
+
+    def test_us_date_in_front_matter_is_normalised(self):
+        text = "---\ntitle: GBM plots\ndate: 12-1-2025\n---\n"
+        fm = notebook_parsing.parse_front_matter(text)
+        self.assertEqual(fm["date"], "2025-12-01")
+
+    def test_placeholder_date_in_front_matter_is_none(self):
+        text = "---\ntitle: Template\ndate: YYYY-MM-DD\n---\n"
+        fm = notebook_parsing.parse_front_matter(text)
+        self.assertIsNone(fm["date"])
 
     def test_missing_categories_is_empty_list(self):
         text = "---\ntitle: No cats\ndate: 2026-07-15\n---\n"

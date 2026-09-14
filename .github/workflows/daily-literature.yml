@@ -4,10 +4,28 @@ on:
   schedule:
     # GitHub cron is UTC-only. 16:00 UTC = 09:00 America/Los_Angeles during PDT,
     # 08:00 during PST. Exact timing matters much less here than for the weekly
-    # job: the skill fetches a 3-day window and de-duplicates on connected_urls,
-    # so a delayed or skipped run catches up instead of losing findings.
+    # job: the skill fetches a multi-day window and de-duplicates on
+    # connected_urls, so a run delayed by a day or two catches up on its own.
+    #
+    # That self-healing has a hard limit, and it is the default window length:
+    # a gap LONGER than `days` loses the posts that fall through it, because
+    # they never appear in any later window. The 2026-08-25..2026-09-01 outage
+    # was 8 days against a 3-day window, so Aug 25-28 were never evaluated.
+    # That is what the `days` input below is for — see it for how to catch up.
     - cron: "0 16 * * *"
   workflow_dispatch:
+    inputs:
+      days:
+        description: >-
+          Window length in days. Leave at 3 for a normal run. Raise it to catch
+          up after an outage longer than the window: the number must span back
+          to the first missed day, counting today as day 1. Widening is safe at
+          any size — connected_urls means a post is processed at most once ever,
+          so re-covered days are a no-op, not a repeat. Note the one-post-per-day
+          cap still applies, so a catch-up produces ONE post covering everything
+          it finds, not one post per missed day.
+        required: false
+        default: "3"
 
 permissions:
   contents: write
@@ -28,8 +46,29 @@ jobs:
       # dates all agree. Under UTC a run near midnight Pacific would compare
       # today's date against yesterday's posts.
       TZ: America/Los_Angeles
+      # Scheduled runs get the default; a dispatch can widen it to catch up.
+      # Resolved once here so the cap check, the skill prompt, and the log all
+      # quote the same number.
+      DAYS: ${{ inputs.days || '3' }}
     steps:
       - uses: actions/checkout@v4
+
+      # A bad `days` reaches the skill as prose inside a prompt, where a typo
+      # would be interpreted rather than rejected. Fail on it here instead.
+      - name: Validate days input
+        run: |
+          case "$DAYS" in
+            ''|*[!0-9]*)
+              echo "::error::days must be a positive integer, got '$DAYS'."
+              exit 1 ;;
+          esac
+          if [ "$DAYS" -lt 1 ] || [ "$DAYS" -gt 60 ]; then
+            echo "::error::days must be between 1 and 60, got '$DAYS'. A window" \
+                 "beyond 60 days is almost certainly a mistake; if it is not," \
+                 "raise this bound deliberately."
+            exit 1
+          fi
+          echo "::notice::Window: last $DAYS day(s)."
 
       - uses: actions/setup-python@v5
         with:
@@ -44,8 +83,15 @@ jobs:
         with:
           node-version: "22"
 
+      # Pinned to an exact version, for the same reason --model is pinned
+      # below: an unpinned install takes whatever the CLI happens to be on the
+      # day the cron fires. The permission-prompt behaviour that silently
+      # no-opped every run from 2026-08-25 to 2026-09-01 was CLI behaviour,
+      # and the "blocked agent" regex further down greps for prompt phrasings
+      # that are not stable across CLI versions. Bump this deliberately, and
+      # run the workflow by hand once after bumping.
       - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.261
 
       - name: Verify secrets are configured
         env:
@@ -109,16 +155,20 @@ jobs:
       # Only catches LIVE posts (the public API does not return drafts) — which
       # are exactly the ones where a duplicate actually matters.
       #
-      # Matches on the TITLE prefix, not the category. Posts this skill publishes
-      # with --category auto-literature-connections come back from the WordPress
-      # API as Uncategorized, so the category cannot be trusted here; the H1 the
-      # skill emits in step 6 is deterministic and does survive. The category is
-      # still checked as a second signal in case that is ever fixed.
+      # Matches on the TITLE prefix first, the category second. The H1 the skill
+      # emits in step 6 is deterministic and always survives; the
+      # auto-literature-connections category has applied to every live post
+      # since an admin created it on the site on 2026-08-25, but it depends on
+      # the category continuing to exist there, so it stays the backup signal.
       # ---------------------------------------------------------------------
       - name: Cap check — WordPress
         id: cap_wp
         if: steps.cap_state.outputs.blocked != 'true'
         run: |
+          # Fixed at 3 on purpose — NOT $DAYS. This check only asks whether a
+          # post already exists for TODAY, so the shortest window that reliably
+          # contains today is the right one; widening it with a catch-up $DAYS
+          # would pull in old posts this check would only have to discard.
           python3 scripts/fetch_lab_posts.py --days 3 > "$RUNNER_TEMP/posts.json" || true
           python3 - "$RUNNER_TEMP/posts.json" <<'PY' >> "$GITHUB_OUTPUT"
           import datetime, json, sys
@@ -180,9 +230,23 @@ jobs:
         run: |
           set -o pipefail
           ALLOWED="Skill,Read,Write,Edit,Glob,Grep"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/fetch_lab_posts.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 scripts/publish_digest.py:*)"
-          ALLOWED="$ALLOWED,Bash(python3 -c:*)"
+          # One rule for every python3 invocation, deliberately.
+          #
+          # The per-script rules this replaces (fetch_lab_posts.py,
+          # publish_digest.py) were prefix matches, and a prefix match is
+          # defeated by anything the model wraps around the command — a
+          # redirect, a pipe, a leading `cd`. When that happens the CLI falls
+          # through to an interactive approval prompt that nothing in CI can
+          # answer, so the agent stalls, exits, and the job goes green having
+          # published nothing. That is what silently killed every scheduled run
+          # between 2026-08-25 and 2026-09-01.
+          #
+          # Narrowing does not actually contain anything here: `python3 -c` was
+          # already on the list, which is arbitrary code execution by another
+          # name. The per-script rules bought no safety and cost the whole
+          # pipeline. The real containment is that this step never sees
+          # GITHUB_TOKEN (see the step comment above).
+          ALLOWED="$ALLOWED,Bash(python3:*)"
           # Broad on purpose: literature-connector builds its PubMed and
           # Europe PMC URLs at run time, so no prefix rule matches.
           ALLOWED="$ALLOWED,Bash(curl:*)"
@@ -191,13 +255,58 @@ jobs:
           # the unpinned @anthropic-ai/claude-code default happens to be on the
           # day the cron fires, so a CLI default change would silently alter the
           # output of a published post.
-          claude -p "Run the daily-literature-post skill." \
+          claude -p "Run the daily-literature-post skill over a window of the last ${DAYS} days." \
             --model claude-sonnet-5 \
             --permission-mode acceptEdits \
             --max-turns 150 \
             --output-format text \
             --allowedTools "$ALLOWED" \
             2>&1 | tee "$RUNNER_TEMP/daily-run.log"
+
+      # ---------------------------------------------------------------------
+      # Did the agent actually get to do its job?
+      #
+      # "Nothing qualified today" and "the agent was blocked on a permission
+      # prompt and gave up" produce an identical green run. They are not the
+      # same thing, and conflating them let this workflow rot for a week behind
+      # passing checks. A blocked agent has a tell: it asks, in prose, to be
+      # approved. Treat that as the failure it is.
+      #
+      # This runs as its own step rather than inside the run above so a match
+      # fails the job even though `claude -p` itself exited 0.
+      # ---------------------------------------------------------------------
+      - name: Assert the agent was not blocked
+        if: steps.run_skill.outcome == 'success'
+        run: |
+          log="$RUNNER_TEMP/daily-run.log"
+          [ -f "$log" ] || { echo "::error::No run log at $log — the skill step produced no output."; exit 1; }
+
+          # Case-insensitive. These phrasings are not stable across CLI
+          # versions, which is why the check is a broad grep for the shape of
+          # the request ("approve ... permission", "needs ... approval") rather
+          # than one exact sentence.
+          pattern='needs? (your |manual )?approval|approve the (pending )?(tool call|permission)|permission prompt|requires? permission to run'
+          if grep -qiE "$pattern" "$log"; then
+            echo "::error::The agent stopped to ask for tool approval, which nothing can" \
+                 "grant in CI, so it exited without publishing. This is a broken run, not" \
+                 "a quiet day. Check --allowedTools against the command the skill actually" \
+                 "ran; the offending line follows."
+            grep -inE "$pattern" "$log" >&2
+            exit 1
+          fi
+
+          # An empty log means the agent produced no final message at all —
+          # a crash or a max-turns cutoff, never a real "nothing qualified".
+          #
+          # There is no positive assertion to make beyond this: --output-format
+          # text logs only the agent's closing message, not the tool calls, so
+          # the log of a successful run contains no trace of fetch_lab_posts.py
+          # to grep for. Do not add one back without switching the output format.
+          if [ ! -s "$log" ]; then
+            echo "::error::The agent produced no output. It did not finish — treat this" \
+                 "as a failed run, not a quiet day."
+            exit 1
+          fi
 
       # Did a publish actually happen? Read it from the state file rather than
       # parsing the log, so the answer is deterministic. This drives how loud
@@ -240,17 +349,46 @@ jobs:
             echo "No state or digest changes to commit."
             exit 0
           fi
-          git commit -q -m "Add daily literature post ($(date +%Y-%m-%d))"
+          # The message must match what actually happened. A no-publish run still
+          # commits a state change (last_run_date, connected_urls, deferred_urls),
+          # and labelling that "Add daily literature post" sends anyone reading the
+          # git log hunting for a digests/*.md file that was never written.
+          if [ "$PUBLISHED" = "true" ]; then
+            git commit -q -m "Add daily literature post ($(date +%Y-%m-%d))"
+          else
+            git commit -q -m "Record literature run, no post ($(date +%Y-%m-%d))"
+          fi
 
+          conflicted=false
           for attempt in 1 2 3; do
             if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
                && git push origin "HEAD:${GITHUB_REF_NAME}"; then
               echo "Pushed on attempt ${attempt}."
               exit 0
             fi
+            # A pull that hits a content conflict leaves the rebase in
+            # progress, and the next attempt's `git pull --rebase` then fails
+            # on "rebase already in progress" — three times, with no useful
+            # message. Abort it so each retry starts clean. A genuine conflict
+            # (someone hand-edited .literature-state.json today) fails again on
+            # its own and is named as such below; `--abort` is a no-op when no
+            # rebase is in progress.
+            if git rebase --abort 2>/dev/null; then
+              conflicted=true
+              echo "::warning::Rebase onto origin/${GITHUB_REF_NAME} conflicted on" \
+                   "attempt ${attempt}; aborted it before retrying."
+            fi
             sleep $((attempt * 5))
           done
 
+          if [ "$conflicted" = "true" ]; then
+            echo "::error::The state commit conflicts with a change already on" \
+                 "${GITHUB_REF_NAME} — most likely a hand edit to" \
+                 "digests/.literature-state.json made while this run was in" \
+                 "flight. Resolve by hand: merge this run's entries into the" \
+                 "committed file (the run log artifact lists what was evaluated" \
+                 "and published)."
+          fi
           if [ "$PUBLISHED" = "true" ] && [ "$STATUS" = "publish" ]; then
             echo "::error::A post was published LIVE but the state commit could not be" \
                  "pushed. digests/.literature-state.json on the default branch does not" \

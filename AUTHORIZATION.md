@@ -33,10 +33,8 @@ line above is the single control point — editing only that line is sufficient.
 ## What is authorized
 
 - **Scope:** live (immediate) publishing of the automated daily post produced by the
-  `daily-literature-post` skill, which attempts to tag the post with the
-  `auto-literature-connections` category (this tag does not currently apply — see
-  "Safety rails" — because the category does not yet exist on the site and the
-  publishing token cannot create it).
+  `daily-literature-post` skill, which tags the post with the
+  `auto-literature-connections` category (see "Safety rails" for what that tag is for).
 - **Not authorized by this file:** any other skill or script. The weekly / full lab
   digest pipeline (`full-lab-digest`, `weekly-lab-digest`, `wordpress-publisher`) is
   unaffected and continues to publish as it did before. `scripts/publish_digest.py`
@@ -73,15 +71,15 @@ its own output out of its own inputs. Three independent rails, all enforced by t
    title-prefix match:** the skill's own posts have titles beginning with
    `Daily Literature Connections —`, and any candidate whose title matches that prefix
    is excluded from processing. The skill *also* passes
-   `--category auto-literature-connections` when publishing, intending the category as a
-   second exclusion signal — but applying that tag requires the
-   `auto-literature-connections` category to already exist on the WordPress site, and the
-   publishing token **cannot create new categories**. As a result the category has never
-   actually been applied to any post (the API returns published posts as `Uncategorized`),
-   even though the code sends it correctly. Creating that category is **pending manual
-   setup by an admin (Steven)**. Until then, the title-prefix match is the sole mechanism.
-   Once the category exists it becomes a **redundant second layer on top of the title
-   check — not the primary mechanism.**
+   `--category auto-literature-connections` when publishing, and any candidate carrying
+   that category is excluded too. The category is a **redundant second layer on top of
+   the title check — not the primary mechanism.** It depends on the category continuing
+   to exist on the WordPress site: the publishing token can attach an existing category
+   but **cannot create one**, so before an admin created it on 2026-08-25 every post came
+   back `Uncategorized` and the title prefix was the sole guard. Since then the tag has
+   applied to every live post (verified against the public API on 2026-09-05). If the
+   category is ever deleted from the site, the skill keeps working on the title check
+   alone — nothing needs to change in the code.
 
 If any rail is unclear or the state file looks wrong, the safe action is always to
 remove this file — the skill will fall back to drafts, which are private until a human
