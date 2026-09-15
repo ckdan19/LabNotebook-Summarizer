@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Incremental archive builder for all five lab notebook sources.
+"""Incremental archive builder for all seven lab notebook sources.
 
 Walks each source's *entire* history (not the 7-day window the live fetchers use)
 into a local SQLite database with a full-text index, so the digest tools can search
 across everything the labs have ever published.
 
-The build is incremental and resumable. For the four GitHub notebooks it lists a
+The build is incremental and resumable. For the six GitHub notebooks it lists a
 repo's whole posts tree in a single git-tree call and compares each file's blob SHA
 against what is already stored: unchanged posts are skipped without re-fetching, and
 because every processed post is committed as it goes, an interrupted run (a dropped
 connection, an exhausted rate limit) simply resumes on the next invocation. The
 WordPress notebook has no blob SHA, so it is deduplicated by URL instead.
 
-Run a subset with --sources; with no flag it builds all five. Parsing and URL
+Run a subset with --sources; with no flag it builds all seven. Parsing and URL
 derivation are reused wholesale from notebook_parsing — this script only adds the
 enumeration, storage, and incremental-skip layers.
 """
@@ -430,7 +430,7 @@ def main() -> None:
         nargs="+",
         choices=ALL_SOURCES,
         default=ALL_SOURCES,
-        help="which sources to build (default: all five)",
+        help="which sources to build (default: all seven)",
     )
     args = parser.parse_args()
 
