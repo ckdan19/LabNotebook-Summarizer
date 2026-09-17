@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-09-12",
+  "last_run_date": "2026-09-17",
   "connected_urls": [
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
@@ -14,7 +14,12 @@
     "https://genefish.wordpress.com/2026/09/10/september-9th/",
     "https://genefish.wordpress.com/2026/09/11/9-11-26/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/09/16/09-16-hsp70-90-qpcr/",
+      "first_deferred": "2026-09-17"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
