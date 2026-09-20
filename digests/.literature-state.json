@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-09-19",
+  "last_run_date": "2026-09-20",
   "connected_urls": [
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
@@ -17,14 +17,10 @@
     "https://genefish.wordpress.com/2026/09/17/09-17-atp-synthase-citrate-synthase-qpcr/",
     "https://genefish.wordpress.com/2026/09/16/09-16-hsp70-90-qpcr/",
     "https://genefish.wordpress.com/2026/09/18/today-i-re-ran-a-qpcr/",
-    "https://genefish.wordpress.com/2026/09/17/09-17-2026-update/"
+    "https://genefish.wordpress.com/2026/09/17/09-17-2026-update/",
+    "https://genefish.wordpress.com/2026/09/18/checking-oyster-mortality-in-el-nino-experiment/"
   ],
-  "deferred_urls": [
-    {
-      "url": "https://genefish.wordpress.com/2026/09/18/checking-oyster-mortality-in-el-nino-experiment/",
-      "first_deferred": "2026-09-19"
-    }
-  ],
+  "deferred_urls": [],
   "publish_log": [
     {
       "date": "2026-08-18",
@@ -85,6 +81,11 @@
       "date": "2026-09-19",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/09/19/daily-literature-connections-2026-09-19/"
+    },
+    {
+      "date": "2026-09-20",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/20/daily-literature-connections-2026-09-20/"
     }
   ]
 }
