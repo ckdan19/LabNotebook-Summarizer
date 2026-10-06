@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-09-30",
+  "last_run_date": "2026-10-06",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/05/tank-room-and-survival-assays-12/",
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
@@ -99,6 +100,11 @@
       "date": "2026-09-30",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/09/30/daily-literature-connections-2026-09-30/"
+    },
+    {
+      "date": "2026-10-06",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/06/daily-literature-connections-2026-10-06/"
     }
   ]
 }
