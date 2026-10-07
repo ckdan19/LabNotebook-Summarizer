@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-10-06",
+  "last_run_date": "2026-10-07",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/10/05/tank-room-and-survival-assays-12/",
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
@@ -24,7 +24,12 @@
     "https://genefish.wordpress.com/2026/09/30/mortality-checks-2/",
     "https://genefish.wordpress.com/2026/09/29/tank-room-and-survival-assays-9/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/10/07/tank-room-and-survival-assays-13/",
+      "first_deferred": "2026-10-07"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
