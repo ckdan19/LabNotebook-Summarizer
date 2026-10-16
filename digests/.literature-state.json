@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-10-15",
+  "last_run_date": "2026-10-16",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
     "https://genefish.wordpress.com/2026/10/13/oyster-h2o2-priming/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
@@ -29,8 +30,8 @@
   ],
   "deferred_urls": [
     {
-      "url": "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
-      "first_deferred": "2026-10-15"
+      "url": "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
+      "first_deferred": "2026-10-16"
     }
   ],
   "publish_log": [
@@ -123,6 +124,11 @@
       "date": "2026-10-11",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/11/daily-literature-connections-2026-10-11/"
+    },
+    {
+      "date": "2026-10-16",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/16/daily-literature-connections-2026-10-16/"
     }
   ]
 }
