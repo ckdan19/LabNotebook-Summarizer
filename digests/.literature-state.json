@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-10-16",
+  "last_run_date": "2026-10-17",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
     "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
     "https://genefish.wordpress.com/2026/10/13/oyster-h2o2-priming/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
@@ -28,12 +29,7 @@
     "https://genefish.wordpress.com/2026/10/10/10-09-10-sample-point-2-for-repeat-stress-at-35c/",
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/"
   ],
-  "deferred_urls": [
-    {
-      "url": "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
-      "first_deferred": "2026-10-16"
-    }
-  ],
+  "deferred_urls": [],
   "publish_log": [
     {
       "date": "2026-08-18",
