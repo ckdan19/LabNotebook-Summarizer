@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-10-18",
+  "last_run_date": "2026-10-19",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/10/17/tank-room-survival-assays-and-water-chemistry-trial-4/",
     "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
@@ -34,6 +34,10 @@
     {
       "url": "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
       "first_deferred": "2026-10-18"
+    },
+    {
+      "url": "https://genefish.wordpress.com/2026/10/19/oyster-heat-stress-experiment-and-updates/",
+      "first_deferred": "2026-10-19"
     }
   ],
   "publish_log": [
