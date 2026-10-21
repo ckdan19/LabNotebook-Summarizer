@@ -33,7 +33,7 @@ jobs:
       # exactly, or this touches nothing.
       - name: Touch post archive cache
         id: restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .cache/archive.db
           key: archive-db-keepalive-${{ github.run_id }}
