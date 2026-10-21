@@ -4,6 +4,7 @@ import sys
 import os
 import sqlite3
 import unittest
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import build_archive
@@ -60,6 +61,30 @@ class TestRenormalizeDates(unittest.TestCase):
         build_archive.upsert_post(self.conn, _row("tumbling-oysters", "posts/1-a/index.qmd", "05-14-24"))
         self.assertEqual(build_archive.renormalize_dates(self.conn), 1)
         self.assertEqual(build_archive.renormalize_dates(self.conn), 0)
+
+
+class TestEnsureGithubToken(unittest.TestCase):
+    """The gh CLI is an optional fallback, never a requirement."""
+
+    def test_env_token_skips_gh(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "t"}, clear=True), \
+                patch("build_archive.run") as run:
+            build_archive.ensure_github_token()
+        run.assert_not_called()
+
+    def test_missing_gh_continues_unauthenticated(self):
+        with patch.dict(os.environ, {}, clear=True), \
+                patch("build_archive.run", side_effect=FileNotFoundError), \
+                patch("sys.stderr"):
+            build_archive.ensure_github_token()
+            self.assertNotIn("GITHUB_TOKEN", os.environ)
+
+    def test_gh_token_used_when_env_empty(self):
+        done = Mock(returncode=0, stdout="from-gh\n")
+        with patch.dict(os.environ, {}, clear=True), \
+                patch("build_archive.run", return_value=done):
+            build_archive.ensure_github_token()
+            self.assertEqual(os.environ["GITHUB_TOKEN"], "from-gh")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,11 @@ ANALYSIS_SECTIONS = {
     "cross-notebook patterns & connections",
     "literature connections",
 }
+# Sections that are never narrated in either edition: Data & Figures is a list
+# of figure paths and data links, which reads aloud as file names.
+NEVER_NARRATED_SECTIONS = {
+    "data & figures",
+}
 SKIPPED_FIELDS = {
     "categories",
     "figures",
@@ -131,7 +136,9 @@ def digest_to_narration(
             level = len(heading.group(1))
             label = _plain_markdown(heading.group(2))
             if level == 2:
-                include_section = include_analysis or label.lower() not in ANALYSIS_SECTIONS
+                include_section = label.lower() not in NEVER_NARRATED_SECTIONS and (
+                    include_analysis or label.lower() not in ANALYSIS_SECTIONS
+                )
                 if include_section and "digest" not in label.lower():
                     post_number = 0
             if include_section and label:

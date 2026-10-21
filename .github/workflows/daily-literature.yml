@@ -205,7 +205,10 @@ jobs:
       - name: Report publish mode
         if: steps.cap_state.outputs.blocked != 'true' && steps.cap_wp.outputs.blocked != 'true'
         run: |
-          if grep -qF 'AUTOMATED PUBLISHING: AUTHORIZED' AUTHORIZATION.md 2>/dev/null; then
+          # Same rule the skill applies: one exact standalone marker line, not a
+          # substring. The phrase also appears in AUTHORIZATION.md's prose, so a
+          # substring grep would report LIVE even while the marker reads PAUSED.
+          if grep -qxE '[[:space:]]*> AUTOMATED PUBLISHING: AUTHORIZED[[:space:]]*' AUTHORIZATION.md 2>/dev/null; then
             echo "::notice::AUTHORIZATION.md carries the marker — the skill will publish LIVE."
           else
             echo "::notice::No authorization marker — the skill will fall back to a DRAFT."

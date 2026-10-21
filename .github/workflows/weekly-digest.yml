@@ -155,7 +155,12 @@ jobs:
             exit 1
           fi
 
+      # Records WHICH digest file this run wrote, so the publish steps below
+      # publish exactly that file. `ls -t` cannot be trusted for it: every file
+      # from the checkout shares one mtime, so a run that changed only the state
+      # file or index would hand an arbitrary old digest to a LIVE publish.
       - name: Confirm a digest was produced
+        id: produced
         run: |
           git add -A digests/
           if git diff --cached --quiet; then
@@ -165,6 +170,13 @@ jobs:
             exit 1
           fi
           git diff --cached --name-only
+          digest="$(git diff --cached --name-only --diff-filter=AM -- 'digests/full-lab-digest-*.md' | tail -1)"
+          if [ -z "$digest" ]; then
+            echo "::error::digests/ changed but no full-lab-digest-*.md was written or" \
+                 "updated, so there is nothing to publish. Check the digest-run-log artifact."
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push
         run: |
@@ -233,12 +245,10 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Pre-publish check — WordPress
         id: pre_publish
+        env:
+          DIGEST: ${{ steps.produced.outputs.digest }}
         run: |
-          digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
-          if [ -z "$digest" ]; then
-            echo "::error::No full-lab-digest-*.md file found to check."
-            exit 1
-          fi
+          digest="$DIGEST"
           # A window wide enough to contain a re-run of a recent weekly digest.
           # Exact-title matching means a wider window only costs API pages; it
           # cannot turn an unrelated post into a false positive.
@@ -290,12 +300,10 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Publish digest live
         if: steps.pre_publish.outputs.skip != 'true'
+        env:
+          DIGEST: ${{ steps.produced.outputs.digest }}
         run: |
-          digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
-          if [ -z "$digest" ]; then
-            echo "::error::No full-lab-digest-*.md file found to publish."
-            exit 1
-          fi
+          digest="$DIGEST"
           echo "Publishing live from ${digest}"
           python3 scripts/publish_digest.py "$digest" --status publish
 

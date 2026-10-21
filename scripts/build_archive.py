@@ -181,16 +181,29 @@ def upsert_post(conn: sqlite3.Connection, post: dict) -> None:
 # GitHub sources
 # ---------------------------------------------------------------------------
 
-def github_token() -> str:
-    """Get a token from `gh auth token` for authenticated (5,000/hour) requests."""
-    result = run(["gh", "auth", "token"], capture_output=True, text=True)
-    token = result.stdout.strip()
-    if result.returncode != 0 or not token:
-        raise SystemExit(
-            "Could not obtain a GitHub token from `gh auth token`. "
-            "Run `gh auth login` first.\n" + result.stderr.strip()
-        )
-    return token
+def ensure_github_token() -> None:
+    """Make sure the reused headers() helper has a token, if one can be found.
+
+    GITHUB_TOKEN / GH_TOKEN win; `gh auth token` is only a fallback, so the `gh`
+    CLI is optional. With no token at all the build still runs at the
+    unauthenticated 60/hour limit and resumes on a later run if that runs out.
+    """
+    if os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
+        return
+    try:
+        result = run(["gh", "auth", "token"], capture_output=True, text=True)
+    except FileNotFoundError:
+        result = None
+    token = result.stdout.strip() if result and result.returncode == 0 else ""
+    if token:
+        os.environ["GITHUB_TOKEN"] = token
+        return
+    print(
+        "!! No GITHUB_TOKEN/GH_TOKEN set and `gh auth token` gave none — continuing "
+        "unauthenticated (60 requests/hour). A first full build will need several "
+        "resumed runs; set GITHUB_TOKEN to avoid that.",
+        file=sys.stderr,
+    )
 
 
 def call_github(url: str):
@@ -443,10 +456,10 @@ def main() -> None:
 
     try:
         init_db(conn)
+        if any(s in GITHUB_SOURCES for s in args.sources):
+            ensure_github_token()
         for source in args.sources:
             if source in GITHUB_SOURCES:
-                # Set the token for the reused headers() helper (reads GITHUB_TOKEN).
-                os.environ.setdefault("GITHUB_TOKEN", github_token())
                 warnings += process_github_source(conn, source, counts)
             else:
                 warnings += process_wordpress_source(conn, counts)

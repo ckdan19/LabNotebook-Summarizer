@@ -471,5 +471,28 @@ class TestMainPostSelection(unittest.TestCase):
         self.assertIn("rate limit", result["error"].lower())
 
 
+class TestListCommitsPagination(unittest.TestCase):
+    """A window with more than 100 commits must not be cut at the first page."""
+
+    def test_follows_pages_until_short_page(self):
+        pages = [[{"sha": f"a{i}"} for i in range(100)], [{"sha": "b0"}]]
+        urls = []
+
+        def fake(url, timeout):
+            urls.append(url)
+            return pages[len(urls) - 1]
+
+        with patch("fetch_github_notebook.get_json", side_effect=fake):
+            commits = fetch_github_notebook.list_commits("o/r", "2026-01-01T00:00:00Z", 5)
+        self.assertEqual(len(commits), 101)
+        self.assertEqual(commits[-1]["sha"], "b0")
+        self.assertTrue(urls[1].endswith("&page=2"))
+
+    def test_single_short_page_makes_one_call(self):
+        with patch("fetch_github_notebook.get_json", return_value=[{"sha": "x"}]) as g:
+            fetch_github_notebook.list_commits("o/r", "2026-01-01T00:00:00Z", 5)
+        self.assertEqual(g.call_count, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

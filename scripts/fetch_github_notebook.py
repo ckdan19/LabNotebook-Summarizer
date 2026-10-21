@@ -123,9 +123,22 @@ def rate_limit_message(err: HTTPError) -> str:
     return f"GitHub API rate limit reached{when} — {hint}."
 
 
+# A page of the commit listing holds at most 100 commits. Busy weeks (or a wide
+# --days catch-up) can exceed one page, and stopping at page 1 would move the
+# compare base forward and silently drop every post changed before it.
+MAX_COMMIT_PAGES = 10
+
+
 def list_commits(repo: str, since: str, timeout: int) -> list:
-    url = f"{API}/repos/{repo}/commits?since={quote(since)}&per_page=100"
-    return get_json(url, timeout)
+    """Every commit since `since`, newest first, across up to MAX_COMMIT_PAGES pages."""
+    commits = []
+    for page in range(1, MAX_COMMIT_PAGES + 1):
+        url = f"{API}/repos/{repo}/commits?since={quote(since)}&per_page=100&page={page}"
+        batch = get_json(url, timeout)
+        commits.extend(batch)
+        if len(batch) < 100:
+            break
+    return commits
 
 
 def changed_files(repo: str, commits: list, timeout: int):
@@ -212,6 +225,11 @@ def main():
             print(json.dumps({**result, "posts": [], "warnings": warnings}, indent=2))
             return
 
+        if len(commits) >= MAX_COMMIT_PAGES * 100:
+            warnings.append(
+                f"Commit listing hit the {MAX_COMMIT_PAGES * 100}-commit cap — posts "
+                "changed only in the oldest part of the window may be missing."
+            )
         head_sha = commits[0]["sha"]
         files, compare_warnings = changed_files(repo, commits, args.timeout)
         warnings.extend(compare_warnings)
