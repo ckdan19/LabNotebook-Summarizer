@@ -1,10 +1,10 @@
 # WordPress Publisher Skill
 
-Trigger this skill when the user asks to **publish the weekly digest to WordPress**, **post the digest to WordPress**, **create a WordPress draft**, or any similar phrasing that involves sending a lab digest to genefish.wordpress.com.
+Trigger this skill when the user asks to **publish the weekly digest to WordPress**, **post the digest to WordPress**, **publish the digest live**, or any similar phrasing that involves sending a lab digest to genefish.wordpress.com.
 
 ## What this skill does
 
-Reads the most recently generated full lab digest (or a user-specified digest file) and hands it to `scripts/publish_digest.py`, which converts the Markdown to sanitized HTML and POSTs it to the WordPress.com REST API as a **draft** (never published) so the user can review before it goes live.
+Reads the most recently generated full lab digest (or a user-specified digest file) and hands it to `scripts/publish_digest.py`, which converts the Markdown to sanitized HTML and POSTs it to the WordPress.com REST API as a **live published post** (`--status publish`).
 
 All the credential handling, HTML escaping, and JSON encoding happen inside that script. **Do not reimplement any of it in shell.** Digest text is derived from third-party notebook posts, so pasting it into a shell command is a command-injection path: a post title containing `$(...)` or a backtick would execute. The script takes a file path and never lets content reach a shell.
 
@@ -40,17 +40,17 @@ If the output contains an `error` key, report it and stop. Common cases:
 - The digest does not begin with a `# ` heading — the script cannot derive a post title. Ask the user for a title or fix the digest.
 - Neither `python-markdown` nor `pandoc` is installed. Report the message verbatim; the fix is `pip install markdown`.
 
-### 3. Ask the user to confirm
+### 3. Confirm the target (interactive runs only)
 
-Publishing sends lab content to an externally hosted site. **Wait for the user to explicitly confirm** before running step 4, even though the post is created as a draft. Do not skip this because the user asked for "publish" earlier in the conversation — confirm the specific resolved file and title.
+Publishing sends lab content live to an externally hosted site. In an interactive session, confirm the specific resolved file and title with the user before running step 4. In a headless/automated run (no human available to answer), do **not** block on confirmation — proceed to step 4 directly, since the caller has already opted into publishing by invoking this skill.
 
-### 4. Create the draft
+### 4. Publish the post live
 
 ```bash
-python3 scripts/publish_digest.py digests/full-lab-digest-2026-07-21.md
+python3 scripts/publish_digest.py digests/full-lab-digest-2026-07-21.md --status publish
 ```
 
-The script reads the token from `~/.config/LabNotebook-Summarizer/wp_token` itself, sends it only as a request header, and redacts it from anything it prints. It always sets `status: draft`.
+The script reads the token from `~/.config/LabNotebook-Summarizer/wp_token` itself, sends it only as a request header, and redacts it from anything it prints. Passing `--status publish` makes the post go live immediately (the script defaults to `draft` when the flag is omitted).
 
 **Never** `cat` the token file, echo it, pass it as a command-line argument, or interpolate it into a `curl` command. `cat`-ing it would copy the credential into the conversation transcript, and passing it in argv would expose it to any local process via `ps`. If you need to check whether the token exists without reading it:
 
@@ -60,13 +60,13 @@ The script reads the token from `~/.config/LabNotebook-Summarizer/wp_token` itse
 
 ### 5. Report the result
 
-On success the script prints JSON with `status: "draft created"`, `url`, `post_id`, and `http_status`. Report to the user:
+On success the script prints JSON with `status: "published live"`, `url`, `post_id`, and `http_status`. Report to the user:
 
 ```
-Draft created successfully.
+Published live successfully.
 Title: [title]
-WordPress draft URL: [url]
-Status: draft (not yet published — review at the URL above before publishing)
+WordPress post URL: [url]
+Status: published live (visible on the public site at the URL above)
 ```
 
 If `warnings` is non-empty, relay each warning. The most common one is that the token file is readable by other users, with the `chmod 600` command to fix it.
@@ -84,5 +84,5 @@ For the full walkthrough of registering an app and obtaining/storing the token, 
 - The token is read from `~/.config/LabNotebook-Summarizer/wp_token` by the script on each run — never printed to the conversation, never written to another file, never placed in a command line, and never stored between sessions.
 - Digest content never passes through a shell. Only the file *path* is ever a command-line argument.
 - The digest body is sanitized against a tag allowlist before it is sent: `<script>`, `<style>`, `<iframe>`, inline event handlers such as `onerror`, and `javascript:` URLs are removed. Lab digests summarize third-party posts, so treat their content as untrusted when it is about to reach a public site.
-- The status is always `draft` — this skill never publishes directly.
+- The post is published live with `--status publish`. The sanitization above is what keeps untrusted third-party content safe to send straight to the public site.
 - If authentication fails at any point, stop and report rather than retrying or falling back.

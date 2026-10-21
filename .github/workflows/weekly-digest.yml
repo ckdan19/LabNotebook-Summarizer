@@ -198,11 +198,11 @@ jobs:
             echo "::error::The digest commit conflicts with a change already on" \
                  "${GITHUB_REF_NAME} — most likely a hand edit to" \
                  "digests/.digest-state.json made while this run was in flight." \
-                 "Nothing was published (the draft step runs after this one)." \
+                 "Nothing was published (the publish step runs after this one)." \
                  "Re-running is safe; the state file will be regenerated."
           else
             echo "::error::Could not push the digest commit after 3 attempts." \
-                 "Nothing was published (the draft step runs after this one)." \
+                 "Nothing was published (the publish step runs after this one)." \
                  "Re-running is safe."
           fi
           exit 1
@@ -210,28 +210,27 @@ jobs:
           DAYS: ${{ inputs.days || '7' }}
 
       # ---------------------------------------------------------------------
-      # Publish the digest to WordPress as a DRAFT.
+      # Publish the digest to WordPress LIVE.
       #
-      # This mirrors what the WSL crontab does for the weekly digest — it hands
-      # the freshly generated digest to publish_digest.py with --status draft so
-      # a human can review it before it goes live. publish_digest.py defaults to
-      # draft and treats --status publish as an explicit override, so there is
-      # no path here by which this posts live. The token installed above is read
-      # by publish_digest.py from disk and only ever sent in a request header.
+      # This hands the freshly generated digest to publish_digest.py with
+      # --status publish so the post goes live immediately. publish_digest.py
+      # defaults to draft and treats --status publish as an explicit override,
+      # which is passed here. The token installed above is read by
+      # publish_digest.py from disk and only ever sent in a request header.
       #
       # Runs after commit/push so the digest and its de-duplication state are
-      # already durable on the branch; a draft-publish failure then fails loudly
-      # without having lost that state, and re-publishing a draft by hand is safe.
+      # already durable on the branch; a publish failure then fails loudly
+      # without having lost that state, and re-publishing by hand is safe.
       # ---------------------------------------------------------------------
-      - name: Publish digest draft
+      - name: Publish digest live
         run: |
           digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
           if [ -z "$digest" ]; then
             echo "::error::No full-lab-digest-*.md file found to publish."
             exit 1
           fi
-          echo "Publishing draft from ${digest}"
-          python3 scripts/publish_digest.py "$digest" --status draft
+          echo "Publishing live from ${digest}"
+          python3 scripts/publish_digest.py "$digest" --status publish
 
       - name: Upload run log
         if: always()
