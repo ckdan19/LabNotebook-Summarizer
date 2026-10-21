@@ -210,6 +210,70 @@ jobs:
           DAYS: ${{ inputs.days || '7' }}
 
       # ---------------------------------------------------------------------
+      # Pre-publish check — WordPress LIVE title.
+      #
+      # Modeled on rail B of daily-literature.yml. The digest and its
+      # de-duplication state are already committed and pushed above, but the
+      # live post itself is not durable anywhere in this repo: if an earlier
+      # run published the digest and then failed (or it is re-run by hand),
+      # WordPress may already carry this exact digest. WordPress is the one
+      # source of truth that survives a failed run, so ask it directly before
+      # publishing again rather than risk a duplicate live post.
+      #
+      # Only catches LIVE posts (the public API does not return drafts) — which
+      # are exactly the ones where a duplicate actually matters.
+      #
+      # Matches on the FULL title, "Full Lab Digest — <range> (<n> days)",
+      # which is unique per digest window: a different week's live post carries
+      # a different date range and so cannot false-positive against this one.
+      # The title compared is the one publish_digest.py will itself use (same
+      # split_digest), so the check and the publish can never drift apart.
+      #
+      # A fetch that fails does NOT block — publishing proceeds, same as rail B.
+      # ---------------------------------------------------------------------
+      - name: Pre-publish check — WordPress
+        id: pre_publish
+        run: |
+          digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
+          if [ -z "$digest" ]; then
+            echo "::error::No full-lab-digest-*.md file found to check."
+            exit 1
+          fi
+          # A window wide enough to contain a re-run of a recent weekly digest.
+          # Exact-title matching means a wider window only costs API pages; it
+          # cannot turn an unrelated post into a false positive.
+          python3 scripts/fetch_lab_posts.py --days 14 > "$RUNNER_TEMP/posts.json" || true
+          python3 - "$digest" "$RUNNER_TEMP/posts.json" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, sys
+          sys.path.insert(0, "scripts")
+          from publish_digest import split_digest
+          title, _ = split_digest(sys.argv[1])
+          want = title.strip().lower()
+          try:
+              data = json.load(open(sys.argv[2]))
+          except (OSError, ValueError) as exc:
+              # Cannot verify — do not block; a publish failure still fails loudly.
+              print(f"::warning::Could not check WordPress for an existing digest "
+                    f"({exc}). Publishing anyway.", file=sys.stderr)
+              print("skip=false")
+              sys.exit(0)
+          if data.get("error"):
+              print(f"::warning::Post fetch failed: {data['error']}. Publishing anyway.",
+                    file=sys.stderr)
+              print("skip=false")
+              sys.exit(0)
+          dupes = [p for p in data.get("posts", [])
+                   if (p.get("title") or "").strip().lower() == want]
+          if dupes:
+              print(f"::notice::A live digest titled {title!r} already exists "
+                    f"({dupes[0].get('url')}); skipping publish. The digest file and "
+                    f"state commit above still stand.", file=sys.stderr)
+              print("skip=true")
+          else:
+              print("skip=false")
+          PY
+
+      # ---------------------------------------------------------------------
       # Publish the digest to WordPress LIVE.
       #
       # This hands the freshly generated digest to publish_digest.py with
@@ -221,8 +285,11 @@ jobs:
       # Runs after commit/push so the digest and its de-duplication state are
       # already durable on the branch; a publish failure then fails loudly
       # without having lost that state, and re-publishing by hand is safe.
+      #
+      # Skipped when the pre-publish check found this exact digest already live.
       # ---------------------------------------------------------------------
       - name: Publish digest live
+        if: steps.pre_publish.outputs.skip != 'true'
         run: |
           digest="$(ls -t digests/full-lab-digest-*.md | head -1)"
           if [ -z "$digest" ]; then
