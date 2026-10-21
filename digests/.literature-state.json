@@ -1,7 +1,11 @@
 {
-  "last_run_date": "2026-09-12",
+  "last_run_date": "2026-10-20",
   "connected_urls": [
-    "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
+    "https://genefish.wordpress.com/2026/10/19/oyster-heat-stress-experiment-and-updates/",
+    "https://genefish.wordpress.com/2026/10/17/tank-room-survival-assays-and-water-chemistry-trial-4/",
+    "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
+    "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
+    "https://genefish.wordpress.com/2026/10/13/oyster-h2o2-priming/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
     "https://genefish.wordpress.com/2026/08/21/tank-room-and-survival-assays-2/",
@@ -9,12 +13,30 @@
     "https://genefish.wordpress.com/2026/09/02/prelim-data-analysis-we-have/",
     "https://genefish.wordpress.com/2026/09/04/qpcr-results-hsp70-hsp90-atp-synthase/",
     "https://genefish.wordpress.com/2026/09/07/i-just-re-ran-the/",
-    "https://genefish.wordpress.com/2026/09/08/09-08-qpcr-results-for-citrate-synthase/",
     "https://genefish.wordpress.com/2026/09/07/round-5-survival-assays/",
+    "https://genefish.wordpress.com/2026/09/08/09-08-qpcr-results-for-citrate-synthase/",
     "https://genefish.wordpress.com/2026/09/10/september-9th/",
-    "https://genefish.wordpress.com/2026/09/11/9-11-26/"
+    "https://genefish.wordpress.com/2026/09/11/9-11-26/",
+    "https://genefish.wordpress.com/2026/09/16/09-16-hsp70-90-qpcr/",
+    "https://genefish.wordpress.com/2026/09/17/09-17-2026-update/",
+    "https://genefish.wordpress.com/2026/09/17/09-17-atp-synthase-citrate-synthase-qpcr/",
+    "https://genefish.wordpress.com/2026/09/17/pcsga-conference-results-and-slides/",
+    "https://genefish.wordpress.com/2026/09/18/checking-oyster-mortality-in-el-nino-experiment/",
+    "https://genefish.wordpress.com/2026/09/18/today-i-re-ran-a-qpcr/",
+    "https://genefish.wordpress.com/2026/09/21/sept-21st-oyster-inventory-combining-el-nino-bags-and-resazurin-assays/",
+    "https://genefish.wordpress.com/2026/09/29/tank-room-and-survival-assays-9/",
+    "https://genefish.wordpress.com/2026/09/30/mortality-checks-2/",
+    "https://genefish.wordpress.com/2026/10/05/tank-room-and-survival-assays-12/",
+    "https://genefish.wordpress.com/2026/10/07/tank-room-and-survival-assays-13/",
+    "https://genefish.wordpress.com/2026/10/10/10-09-10-sample-point-2-for-repeat-stress-at-35c/",
+    "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
+      "first_deferred": "2026-10-18"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
@@ -65,6 +87,56 @@
       "date": "2026-09-12",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/09/12/daily-literature-connections-2026-09-12/"
+    },
+    {
+      "date": "2026-09-18",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/18/daily-literature-connections-2026-09-18/"
+    },
+    {
+      "date": "2026-09-19",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/19/daily-literature-connections-2026-09-19/"
+    },
+    {
+      "date": "2026-09-20",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/20/daily-literature-connections-2026-09-20/"
+    },
+    {
+      "date": "2026-09-23",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/23/daily-literature-connections-2026-09-23/"
+    },
+    {
+      "date": "2026-09-30",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/09/30/daily-literature-connections-2026-09-30/"
+    },
+    {
+      "date": "2026-10-06",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/06/daily-literature-connections-2026-10-06/"
+    },
+    {
+      "date": "2026-10-08",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/08/daily-literature-connections-2026-10-08/"
+    },
+    {
+      "date": "2026-10-11",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/11/daily-literature-connections-2026-10-11/"
+    },
+    {
+      "date": "2026-10-16",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/16/daily-literature-connections-2026-10-16/"
+    },
+    {
+      "date": "2026-10-18",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/18/daily-literature-connections-2026-10-18/"
     }
   ]
 }
