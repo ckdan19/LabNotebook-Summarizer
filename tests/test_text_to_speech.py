@@ -74,6 +74,17 @@ class TestDigestNarration(unittest.TestCase):
         self.assertIn("Heat stress appeared in two notebooks.", result)
         self.assertIn("External literature details.", result)
 
+    def test_data_and_figures_section_is_never_narrated(self):
+        digest = (
+            "# Digest\n\n## Ariana\n\n### Post\n\n- **Key finding**: Oysters survived.\n\n"
+            "## Data & Figures\n\nGrace: ../notebook-images/plate9.PNG\n"
+        )
+        for include_analysis in (False, True):
+            result = digest_to_narration(digest, include_analysis=include_analysis)
+            self.assertIn("Oysters survived", result)
+            self.assertNotIn("Data & Figures", result)
+            self.assertNotIn("plate9", result)
+
     def test_empty_digest_is_rejected(self):
         with self.assertRaises(ValueError):
             digest_to_narration("# Title\n\n> Metadata only")

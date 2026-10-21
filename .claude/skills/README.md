@@ -12,7 +12,7 @@ rather than reimplemented in it.
 
 Related directories:
 
-- [`../agents/`](../agents/) — one subagent per notebook source (five total). Skills that
+- [`../agents/`](../agents/) — one subagent per notebook source (seven total). Skills that
   need notebook content launch these; they do not fetch posts themselves.
 - [`../shared/notebook-digest-format.md`](../shared/notebook-digest-format.md) — the
   output contract the four GitHub agents share.
@@ -36,13 +36,13 @@ Related directories:
 
 ### `full-lab-digest`
 
-The main entry point. Launches all five notebook subagents **in parallel in a single
+The main entry point. Launches all seven notebook subagents **in parallel in a single
 message**, then compiles their summaries into one Markdown file organized by source.
 The window defaults to 7 days and follows whatever the user asks for ("the last 14
 days"); the window is threaded through the subagents' `--days`, the header date range,
 and the filename, so a 14-day digest never overwrites the 7-day one ending the same day.
 
-On top of the five verbatim summaries it derives three sections, each omitted rather
+On top of the seven verbatim summaries it derives three sections, each omitted rather
 than padded when there is nothing real to report: **Cross-Notebook Patterns &
 Connections** (only when a specific named entity ties two sources together),
 **Historical Connections** (a read-only archive query over the 8 weeks *ending the day
@@ -90,7 +90,7 @@ cached deliberately — the same query can be re-analyzed against a new `FINDING
 ### `lab-archive`
 
 Answers questions about the lab's own accumulated history by full-text-searching
-`.cache/archive.db`, the local archive of every post the five notebooks have published,
+`.cache/archive.db`, the local archive of every post the seven notebooks have published,
 and reports grouped by researcher with a cited source link for every claim.
 
 **Read-only, strictly.** It opens connections read-only and issues only `SELECT`s.

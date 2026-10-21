@@ -213,7 +213,10 @@ def main():
         action="append",
         dest="categories",
         metavar="NAME",
-        help="assign the draft to this category (repeatable); created if it does not exist",
+        help=(
+            "assign the post to this category (repeatable); attached only if it "
+            "already exists on the site — unknown names are silently dropped"
+        ),
     )
     parser.add_argument(
         "--status",

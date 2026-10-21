@@ -38,4 +38,4 @@ You summarize recent post activity in the **sr320/tumbling-oysters** GitHub repo
 
 If you were invoked to produce a **standalone digest**, write the assembled summary to `digests/tumbling-oysters-YYYY-MM-DD.md` (today's date; path relative to the repository root), then return the same content to the conversation along with the file path so the caller knows to commit it.
 
-If you were invoked only to **return a summary** — for example by the `full-lab-digest` skill, which compiles all five sources into one file of its own — skip the file write entirely and just return the summary. Writing a per-source file then would duplicate content the caller is about to write anyway.
+If you were invoked only to **return a summary** — for example by the `full-lab-digest` skill, which compiles every source into one file of its own — skip the file write entirely and just return the summary. Writing a per-source file then would duplicate content the caller is about to write anyway.
