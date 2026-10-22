@@ -1,6 +1,9 @@
 {
-  "last_run_date": "2026-10-21",
+  "last_run_date": "2026-10-22",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/22/heat-stress-experiment-continued/",
+    "https://genefish.wordpress.com/2026/10/21/resazurin-assay-and-heat-stress-experiment-continued/",
+    "https://genefish.wordpress.com/2026/10/20/oyster-heat-stress-continued-and-resazurin-assay/",
     "https://genefish.wordpress.com/2026/10/19/tank-room-survival-assays-and-water-chemistry-trial-5/",
     "https://genefish.wordpress.com/2026/10/19/oyster-heat-stress-experiment-and-updates/",
     "https://genefish.wordpress.com/2026/10/17/tank-room-survival-assays-and-water-chemistry-trial-4/",
@@ -36,10 +39,6 @@
     {
       "url": "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
       "first_deferred": "2026-10-18"
-    },
-    {
-      "url": "https://genefish.wordpress.com/2026/10/20/oyster-heat-stress-continued-and-resazurin-assay/",
-      "first_deferred": "2026-10-21"
     }
   ],
   "publish_log": [
@@ -147,6 +146,11 @@
       "date": "2026-10-21",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/21/daily-literature-connections-2026-10-21/"
+    },
+    {
+      "date": "2026-10-22",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/22/daily-literature-connections-2026-10-22/"
     }
   ]
 }
