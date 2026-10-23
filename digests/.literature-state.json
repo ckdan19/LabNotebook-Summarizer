@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-10-22",
+  "last_run_date": "2026-10-23",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/10/22/heat-stress-experiment-continued/",
     "https://genefish.wordpress.com/2026/10/21/resazurin-assay-and-heat-stress-experiment-continued/",
@@ -39,6 +39,10 @@
     {
       "url": "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
       "first_deferred": "2026-10-18"
+    },
+    {
+      "url": "https://genefish.wordpress.com/2026/10/21/10-21-stress-exposures-for-35-c-and-sublethal-lethal-projects/",
+      "first_deferred": "2026-10-23"
     }
   ],
   "publish_log": [
