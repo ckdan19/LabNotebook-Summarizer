@@ -1,15 +1,6 @@
 {
-  "last_run_date": "2026-10-23",
+  "last_run_date": "2026-10-24",
   "connected_urls": [
-    "https://genefish.wordpress.com/2026/10/22/heat-stress-experiment-continued/",
-    "https://genefish.wordpress.com/2026/10/21/resazurin-assay-and-heat-stress-experiment-continued/",
-    "https://genefish.wordpress.com/2026/10/20/oyster-heat-stress-continued-and-resazurin-assay/",
-    "https://genefish.wordpress.com/2026/10/19/tank-room-survival-assays-and-water-chemistry-trial-5/",
-    "https://genefish.wordpress.com/2026/10/19/oyster-heat-stress-experiment-and-updates/",
-    "https://genefish.wordpress.com/2026/10/17/tank-room-survival-assays-and-water-chemistry-trial-4/",
-    "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
-    "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
-    "https://genefish.wordpress.com/2026/10/13/oyster-h2o2-priming/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
     "https://genefish.wordpress.com/2026/08/21/tank-room-and-survival-assays-2/",
@@ -33,16 +24,23 @@
     "https://genefish.wordpress.com/2026/10/05/tank-room-and-survival-assays-12/",
     "https://genefish.wordpress.com/2026/10/07/tank-room-and-survival-assays-13/",
     "https://genefish.wordpress.com/2026/10/10/10-09-10-sample-point-2-for-repeat-stress-at-35c/",
+    "https://genefish.wordpress.com/2026/10/13/oyster-h2o2-priming/",
+    "https://genefish.wordpress.com/2026/10/15/oyster-priming-day-3-and-4/",
+    "https://genefish.wordpress.com/2026/10/16/10-15-rna-extraction/",
+    "https://genefish.wordpress.com/2026/10/17/tank-room-survival-assays-and-water-chemistry-trial-4/",
+    "https://genefish.wordpress.com/2026/10/19/oyster-heat-stress-experiment-and-updates/",
+    "https://genefish.wordpress.com/2026/10/19/tank-room-survival-assays-and-water-chemistry-trial-5/",
+    "https://genefish.wordpress.com/2026/10/20/oyster-heat-stress-continued-and-resazurin-assay/",
+    "https://genefish.wordpress.com/2026/10/21/10-21-stress-exposures-for-35-c-and-sublethal-lethal-projects/",
+    "https://genefish.wordpress.com/2026/10/21/resazurin-assay-and-heat-stress-experiment-continued/",
+    "https://genefish.wordpress.com/2026/10/22/heat-stress-experiment-continued/",
+    "https://genefish.wordpress.com/2026/10/23/tank-room-and-water-chemistry-trial/",
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/"
   ],
   "deferred_urls": [
     {
       "url": "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
       "first_deferred": "2026-10-18"
-    },
-    {
-      "url": "https://genefish.wordpress.com/2026/10/21/10-21-stress-exposures-for-35-c-and-sublethal-lethal-projects/",
-      "first_deferred": "2026-10-23"
     }
   ],
   "publish_log": [
@@ -155,6 +153,11 @@
       "date": "2026-10-22",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/22/daily-literature-connections-2026-10-22/"
+    },
+    {
+      "date": "2026-10-24",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/24/daily-literature-connections-2026-10-24/"
     }
   ]
 }
