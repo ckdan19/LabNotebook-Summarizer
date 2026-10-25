@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-10-24",
+  "last_run_date": "2026-10-25",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
@@ -35,6 +35,9 @@
     "https://genefish.wordpress.com/2026/10/21/resazurin-assay-and-heat-stress-experiment-continued/",
     "https://genefish.wordpress.com/2026/10/22/heat-stress-experiment-continued/",
     "https://genefish.wordpress.com/2026/10/23/tank-room-and-water-chemistry-trial/",
+    "https://genefish.wordpress.com/2026/10/24/tank-room-and-water-chemistry-trial-2/",
+    "https://genefish.wordpress.com/2026/10/24/m-gigas-30c-11c-21c-shaking-and-21c-tests-10-19-26-10-20-2026-and-data-processing-10-20-2026-10-24-2026/",
+    "https://genefish.wordpress.com/2026/10/24/heat-stress-experiment-with-oysters-concluded/",
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/"
   ],
   "deferred_urls": [
@@ -158,6 +161,11 @@
       "date": "2026-10-24",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/24/daily-literature-connections-2026-10-24/"
+    },
+    {
+      "date": "2026-10-25",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/25/daily-literature-connections-2026-10-25/"
     }
   ]
 }
