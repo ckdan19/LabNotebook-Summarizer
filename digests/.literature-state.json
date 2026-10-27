@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-10-25",
+  "last_run_date": "2026-10-27",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/26/10-26-data-collection-with-ai-tool/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
     "https://genefish.wordpress.com/2026/08/20/tank-room-heat-exposures-and-resazurin-assays/",
     "https://genefish.wordpress.com/2026/08/21/tank-room-and-survival-assays-2/",
@@ -166,6 +167,11 @@
       "date": "2026-10-25",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/25/daily-literature-connections-2026-10-25/"
+    },
+    {
+      "date": "2026-10-27",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/27/daily-literature-connections-2026-10-27/"
     }
   ]
 }
