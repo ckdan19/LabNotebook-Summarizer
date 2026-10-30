@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-10-29",
+  "last_run_date": "2026-10-30",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/10/29/tank-room-and-water-chemistry-trial-4/",
     "https://genefish.wordpress.com/2026/10/28/10-28-glycogenglo-analysis-35-c-repeat/",
     "https://genefish.wordpress.com/2026/10/26/10-26-data-collection-with-ai-tool/",
     "https://genefish.wordpress.com/2026/08/17/resazurin-stability-experiment-and-survival-assays/",
@@ -184,6 +185,11 @@
       "date": "2026-10-29",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/10/29/daily-literature-connections-2026-10-29/"
+    },
+    {
+      "date": "2026-10-30",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/10/30/daily-literature-connections-2026-10-30/"
     }
   ]
 }
