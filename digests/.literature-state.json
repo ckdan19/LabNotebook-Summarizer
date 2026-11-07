@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-11-06",
+  "last_run_date": "2026-11-07",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/11/05/11-05-rna-extraction-test/",
     "https://genefish.wordpress.com/2026/11/02/tank-room-and-water-chemistry-trial-5/",
     "https://genefish.wordpress.com/2026/10/16/day-5-of-oyster-priming/",
     "https://genefish.wordpress.com/2026/10/29/tank-room-and-water-chemistry-trial-4/",
@@ -46,12 +47,7 @@
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/10/27/tank-room-and-water-chemistry-trial-3/"
   ],
-  "deferred_urls": [
-    {
-      "url": "https://genefish.wordpress.com/2026/11/05/11-05-rna-extraction-test/",
-      "first_deferred": "2026-11-06"
-    }
-  ],
+  "deferred_urls": [],
   "publish_log": [
     {
       "date": "2026-08-18",
@@ -197,6 +193,11 @@
       "date": "2026-11-03",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/11/03/daily-literature-connections-2026-11-03/"
+    },
+    {
+      "date": "2026-11-07",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/11/07/daily-literature-connections-2026-11-07/"
     }
   ]
 }
