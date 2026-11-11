@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-11-10",
+  "last_run_date": "2026-11-11",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/11/11/guava-muse-system-check-and-preliminary-testing/",
     "https://genefish.wordpress.com/2026/11/09/tank-room-and-water-chemistry-trials/",
     "https://genefish.wordpress.com/2026/11/09/aquilonastra-stars/",
     "https://genefish.wordpress.com/2026/11/09/coding-for-the-resazurin-assay/",
@@ -211,6 +212,11 @@
       "date": "2026-11-10",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/11/10/daily-literature-connections-2026-11-10/"
+    },
+    {
+      "date": "2026-11-11",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/11/11/daily-literature-connections-2026-11-11/"
     }
   ]
 }
