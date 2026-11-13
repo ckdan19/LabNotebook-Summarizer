@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-11-11",
+  "last_run_date": "2026-11-13",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/11/12/the-left-blue-tank-was/",
     "https://genefish.wordpress.com/2026/11/11/guava-muse-system-check-and-preliminary-testing/",
     "https://genefish.wordpress.com/2026/11/09/tank-room-and-water-chemistry-trials/",
     "https://genefish.wordpress.com/2026/11/09/aquilonastra-stars/",
@@ -217,6 +218,11 @@
       "date": "2026-11-11",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/11/11/daily-literature-connections-2026-11-11/"
+    },
+    {
+      "date": "2026-11-13",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/11/13/daily-literature-connections-2026-11-13/"
     }
   ]
 }
