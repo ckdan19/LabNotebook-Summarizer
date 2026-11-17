@@ -1,5 +1,5 @@
 {
-  "last_run_date": "2026-11-13",
+  "last_run_date": "2026-11-17",
   "connected_urls": [
     "https://genefish.wordpress.com/2026/11/12/the-left-blue-tank-was/",
     "https://genefish.wordpress.com/2026/11/11/guava-muse-system-check-and-preliminary-testing/",
@@ -52,7 +52,12 @@
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/10/27/tank-room-and-water-chemistry-trial-3/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/11/16/tank-room-shore-room-and-water-chemistry-trials/",
+      "first_deferred": "2026-11-17"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
