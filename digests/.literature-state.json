@@ -1,6 +1,7 @@
 {
-  "last_run_date": "2026-11-18",
+  "last_run_date": "2026-11-21",
   "connected_urls": [
+    "https://genefish.wordpress.com/2026/11/20/tank-room-shore-room-and-water-chemistry-trials-3/",
     "https://genefish.wordpress.com/2026/11/18/tank-room-shore-room-and-water-chemistry-trials-2/",
     "https://genefish.wordpress.com/2026/11/16/tank-room-shore-room-and-water-chemistry-trials/",
     "https://genefish.wordpress.com/2026/11/12/the-left-blue-tank-was/",
@@ -54,7 +55,12 @@
     "https://robertslab.github.io/sams-notebook/posts/2026/2026-02-02-qPCR-Analysis---M.gigas-PolyIC-Data-from-Valentinas-Project/",
     "https://genefish.wordpress.com/2026/10/27/tank-room-and-water-chemistry-trial-3/"
   ],
-  "deferred_urls": [],
+  "deferred_urls": [
+    {
+      "url": "https://genefish.wordpress.com/2026/11/19/water-quality-testing-adjustment-feeding-regimen-adjustment-for-aquilonastras-quick-transcriptomic-update/",
+      "first_deferred": "2026-11-21"
+    }
+  ],
   "publish_log": [
     {
       "date": "2026-08-18",
@@ -230,6 +236,11 @@
       "date": "2026-11-18",
       "status": "publish",
       "url": "https://genefish.wordpress.com/2026/11/18/daily-literature-connections-2026-11-18/"
+    },
+    {
+      "date": "2026-11-21",
+      "status": "publish",
+      "url": "https://genefish.wordpress.com/2026/11/21/daily-literature-connections-2026-11-21/"
     }
   ]
 }
