@@ -38,8 +38,30 @@ def episode_label(season: int, episode: int) -> str:
     return "S{:02d}E{:02d}".format(season, episode)
 
 
-def post_title(season: int, episode: int, catchy: str) -> str:
-    return "TWIF {} - {}".format(episode_label(season, episode), catchy)
+def post_title(season: int, episode: int, catchy: str, language: str = "en") -> str:
+    marker = " (Español)" if language == "es" else ""
+    return "TWIF {}{} - {}".format(episode_label(season, episode), marker, catchy)
+
+
+def find_episode(state: Dict[str, Any], episode: Optional[int] = None) -> Dict[str, Any]:
+    """The entry for ``episode`` in the current season, or the latest one."""
+    season = state.get("season", SEASON)
+    entries = [e for e in state["episodes"] if e.get("season", season) == season]
+    if episode is not None:
+        entries = [e for e in entries if e.get("episode") == episode]
+    if not entries:
+        raise ValueError("No recorded episode {}in season {}.".format(
+            "{} ".format(episode) if episode is not None else "", season))
+    return max(entries, key=lambda e: e["episode"])
+
+
+def update_episode(state: Dict[str, Any], season: int, episode: int,
+                   changes: Dict[str, Any]) -> Dict[str, Any]:
+    episodes = [
+        {**e, **changes} if e.get("season") == season and e.get("episode") == episode else e
+        for e in state["episodes"]
+    ]
+    return {**state, "episodes": episodes}
 
 
 def digest_date(path: Path) -> Optional[date]:

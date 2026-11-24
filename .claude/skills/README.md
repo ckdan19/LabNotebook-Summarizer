@@ -31,7 +31,7 @@ Related directories:
 | [`wordpress-publisher`](wordpress-publisher/SKILL.md) | "publish the digest to WordPress" | A WordPress **draft** |
 | [`digest-audio`](digest-audio/SKILL.md) | "narrate the latest digest" | A local WAV of a digest |
 | [`digest-audio-publish`](digest-audio-publish/SKILL.md) | "publish audio for the latest digest" | A new live WordPress post linking the audio |
-| [`twif-podcast`](twif-podcast/SKILL.md) | "make this week's TWIF episode" | A live `podcast`-category post with an MP3 episode |
+| [`twif-podcast`](twif-podcast/SKILL.md) | "make this week's TWIF episode" | Live English (`podcast`) and Chilean Spanish (`podcast-es`) episode posts |
 
 ## What each one does
 
