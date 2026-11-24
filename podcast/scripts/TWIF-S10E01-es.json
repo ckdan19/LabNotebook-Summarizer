@@ -1,0 +1,368 @@
+{
+  "episode_title": "La regla chueca por un factor de diez",
+  "description": "Grace Crandall descubre que su curva estándar de cu pe ce erre estaba corrida diez veces, y el trabajo de Kathleen Durkin sobre metilación en la ostra del este sigue apuntando a una influencia más fuerte del padre. Además, una pregunta sobre el antibiótico del ensayo de resazurina, el inicio del experimento de precondicionamiento térmico de Hazel Abrahamson y un estanque de prueba cuyas ostras siguen sobreviviendo a una química del agua pésima.",
+  "show_notes": [
+    "Corrección de la curva estándar: una dilución nueva, corrida sola en la placa diez, muestra que todas las placas anteriores de cu pe ce erre del proyecto efe hache ele dos mil veintiséis usaron una curva diez veces más alta de lo previsto, lo que abre preguntas sobre resultados anteriores (cuaderno de Grace Crandall).",
+    "Superposición de de eme erre entre padres y descendencia en Crassostrea virginica: las superposiciones con espermatozoide son más grandes y más concordantes que las con óvulo, y la superposición entre cigoto y larva es solo parcial (cuaderno de laboratorio de Kathleen Durkin).",
+    "Anotación funcional del genoma de Crassostrea virginica, cerca del sesenta y uno por ciento de treinta y cuatro mil seiscientos ocho genes, cruzada con los conjuntos de de eme ele y de eme erre antes de un test de enriquecimiento como corresponde (cuaderno de laboratorio de Kathleen Durkin).",
+    "Pregunta sobre el antibiótico del ensayo de resazurina: posibles efectos a largo plazo del antibiótico del master mix sobre el microbioma, junto a un ensayo de resazurina en reproductores con tres clases de tamaño de ostras (registro de ideas del cuaderno de Kathleen Durkin; J Balzer, WordPress de Genefish).",
+    "Experimento de precondicionamiento térmico subletal: primera exposición de una hora a treinta y siete grados Celsius, con las extracciones de a erre ene postergadas por falta de de nasa (Hazel Abrahamson, WordPress de Genefish).",
+    "Estanque de prueba de química del agua: agua muy deteriorada pero sin muertes nuevas, con conexiones automatizadas a la literatura que sugieren un estrés subletal oculto (Jesse Lowe y Cas Daniel, WordPress de Genefish).",
+    "Problemas en un estanque de estrellas de mar y un sistema fallido de intercambio continuo de agua, además de un nuevo acuerdo de mentoría en transcriptómica con Grace (Samuel Slutz, WordPress de Genefish)."
+  ],
+  "segments": [
+    {
+      "speaker": "HOST_A",
+      "text": "Imagínense descubrir que cada placa que han corrido esta temporada se midió con una regla que estaba, calladita, chueca por un factor de diez."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Esa es de esas frases que te hacen dejar el café en la mesa."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Y eso es justo lo que Grace Crandall logró precisar esta semana. Y lo pilló por su cuenta, con una sola placa súper bien diseñada."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Además, en la ostra del este, puede que los papás pesen más que las mamás en lo que es metilación. Ya vamos a llegar a eso."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Bienvenidos y bienvenidas a This Week in efe te erre, ahora en su edición en español, el programa sobre lo que está pasando en los cuadernos abiertos del laboratorio Roberts. Soy Maya."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Y yo soy Theo. Este es el estreno de nuestra temporada diez, así que hola de nuevo a todos."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Un panorama rápido. Tres de las siete fuentes de cuadernos tuvieron actividad en este período. Tumbling Oysters, el cuaderno de Ariana Huffmyer, Sam's Notebook y el cuaderno de Megan Ewing estuvieron tranquilos. Pero los activos tuvieron harto movimiento."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Entonces, Grace. Este es su proyecto efe hache ele dos mil veintiséis, que funciona con pe ce erre cuantitativa, o cu pe ce erre. Theo, ¿un repaso rápido?"
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Claro. En la cu pe ce erre uno sigue cuántos ciclos de amplificación le toma a la señal de una muestra cruzar un umbral. Ese es el valor ce cu. Para convertir un ce cu en una cantidad, se corre una curva estándar, que es una dilución seriada con cantidades iniciales conocidas, y las muestras desconocidas se leen sobre esa línea."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Exacto. Y Grace tenía una sospecha sobre su curva. Así que preparó una dilución seriada nueva y la corrió sola, en su propia placa, la placa diez. Después comparó sus valores ce cu con la curva de la placa nueve."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Inteligente. Aislar la curva, sin nada más en la placa que enturbie el panorama."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Y se confirmó la sospecha. Todas las corridas anteriores en realidad habían usado una curva estándar que iba desde tres por diez elevado a siete hasta tres por diez elevado a uno. El rango que se buscaba era desde tres por diez elevado a seis hasta tres por diez elevado a cero."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "O sea, en números simples, la curva que debía llegar arriba a tres millones en realidad llegaba a treinta millones, y abajo terminaba en treinta en vez de tres. Cada punto corrido por un factor de diez."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Tal cual."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Ya, ¿y por qué importa? Mi apuesta, y esto es pura especulación mía, es que cualquier cosa cuantificada contra estándares mal etiquetados también estaría desfasada. Aunque si todas las placas compartían el mismo desfase, puede que las comparaciones relativas se sostengan mejor que los números absolutos."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Es una advertencia justa, y Grace lo plantea como preguntas abiertas. ¿Las próximas corridas deberían estandarizarse en el rango de treinta millones a treinta? ¿Y hay que corregir de forma retroactiva la designación de la curva estándar en las placas que ya se corrieron?"
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Y la sección del resumen que cruza los cuadernos marca ese efecto dominó, ¿cierto?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Sí. Apunta a dos publicaciones de Grace del trece de octubre: los resultados actuales de cu pe ce erre del proyecto efe hache ele dos mil veintiséis y la corrida de la placa nueve con a de ene de hisopados de pasto marino. El resumen dice que esos resultados basados en ce cu podrían necesitar una segunda mirada, y lo marca explícitamente como algo que requiere verificación humana. Grace o Sam tendrían que revisar si esos valores se cuantificaron contra la curva mal etiquetada."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Quiero dar el crédito acá. Para esto existe un cuaderno abierto. Una corazonada, una prueba limpia, y la parte incómoda escrita para que todos la vean."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "De acuerdo. No es un fracaso, es una corrección que se pilló a tiempo."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Pasemos al proyecto de Kathleen Durkin, que se llama ceasmallr. Algunas de estas publicaciones son de antes en noviembre, pero llegaron en este resumen, y juntas arman un arco bien bonito."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Esta es la ostra del este, Crassostrea virginica. Padres, descendencia y metilación del a de ene."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Sí. Kathleen ya había mirado la superposición entre padres y descendencia a nivel de loci individuales diferencialmente metilados, los de eme ele. Ahora está escalando a regiones diferencialmente metiladas, las de eme erre."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Y cómo se define siquiera la superposición entre regiones? No es nada trivial."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Kathleen tomó prestados los criterios del programa de ese ese, la misma herramienta que identifica las regiones en primer lugar. Al menos cincuenta pares de bases y al menos tres sitios ce pe ge. Y aplicó eso a los conjuntos de de eme erre de óvulo, espermatozoide, cigoto y larva."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Bien consistente. ¿Y qué salió?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Tres cosas. Primero, las de eme erre que se superponen son abrumadoramente concordantes en su dirección. Si una región se mueve hacia un lado en un progenitor, tiende a moverse para el mismo lado en la descendencia. Segundo, las superposiciones entre descendencia y espermatozoide son más grandes y más concordantes que las superposiciones entre descendencia y óvulo."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "O sea, la señal del papá."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "La señal del papá. Refuerza lo que el resumen llama un hallazgo recurrente en este proyecto: que la metilación paterna tiene una influencia más fuerte en la descendencia. Y tercero, hay solo una superposición parcial entre cigoto y larva, lo que de nuevo sugiere una reprogramación epigenética parcial durante el desarrollo."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Parcial es la palabra clave. Algunas marcas se resetean y otras se mantienen. ¿Hay algo en la literatura sobre esto?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "La búsqueda bibliográfica no encontró artículos revisados por pares de los últimos doce meses que coincidan directamente con el hallazgo de padres y descendencia. Hay un preprint en bioRxiv, todavía sin revisión por pares, de McDonough y colaboradores. Mostraron que en ostras del este, una exposición previa a hipoxia deja una huella duradera en la metilación del cuerpo génico."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Pero eso es memoria dentro de la vida de un solo animal, no entre generaciones."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Claro, y el resumen deja claro que ese trabajo no pone a prueba la transmisión paterna versus la materna. Es contexto de que la metilación del cuerpo génico puede ser un registro duradero en esta especie."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Cuerpos génicos. Tengo el presentimiento de que eso va a volver."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Vuelve. El siguiente paso de Kathleen fue preguntarse qué hacen realmente estas regiones. Armó una tabla de anotación funcional para el genoma de Crassostrea virginica, siguiendo el flujo de trabajo del Roberts Lab Handbook. Se hace un BLAST del proteoma contra SwissProt, se mapean las proteínas a genes, se sacan los términos de Gene Ontology y después se mapean a las categorías más amplias de ge o slim."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Lo que significa que solo cubre genes codificantes de proteínas."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Una limitación que Kathleen deja anotada. Cerca del sesenta y uno por ciento de treinta y cuatro mil seiscientos ocho genes quedó con anotación. Los términos de proceso biológico más comunes fueron desarrollo anatómico, diferenciación celular y señalización."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Sesenta y uno por ciento suena bajo hasta que uno se acuerda de que es un invertebrado no modelo. El resumen lo considera una tasa razonable."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Después Kathleen cruzó esa tabla con los conjuntos de de eme ele y de eme erre del tratamiento parental. En todos los conjuntos, se concentran en cuerpos génicos y regiones intergénicas, con pocos en promotores."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Ahí están otra vez los cuerpos génicos. ¿Ya está declarando algo como enriquecido?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Todavía no, y Kathleen lo maneja con mucho cuidado. Por ahora esto describe qué funciones están presentes, no cuáles están sobrerrepresentadas. El próximo paso es un test de enriquecimiento como corresponde, que use como fondo todos los sitios ce pe ge evaluados, en vez del genoma completo."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Ese es el fondo correcto. Si no, uno estaría comparando contra partes del genoma donde nunca podría haber detectado una diferencia."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Una nota al pie del registro de ideas de Kathleen. El dieciocho de noviembre quedó anotado que la anotación escasa, de alrededor del sesenta por ciento en esta especie, probablemente esconde transcritos de respuesta al estrés biológicamente importantes, que por necesidad se ignoran en los estudios de expresión diferencial."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "El cuarenta por ciento sin anotar. La materia oscura del genoma de la ostra."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Ese mismo registro de ideas nos deja servida la siguiente historia. El dieciséis de noviembre, Kathleen planteó una pregunta metodológica sobre el ensayo metabólico de resazurina del laboratorio."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Recuérdame cómo funciona ese."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "El ensayo lee fluorescencia como indicador del metabolismo oxidativo. El master mix del laboratorio incluye un antibiótico para suprimir la actividad del microbioma de la concha, para que uno mida la ostra y no las bacterias que viven encima de ella."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Tiene sentido. ¿Y cuál es la preocupación?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Que el antibiótico podría causar cambios no buscados y de largo plazo en la composición del microbioma de la ostra. Kathleen sugiere que probablemente es despreciable en los ensayos de rutina del criadero, pero que podría importar en estudios de desempeño a largo plazo."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Porque si uno le hace el ensayo a un animal y después lo sigue estudiando, puede que le haya movido los microbios en el camino."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Y el momento es interesante. Cuatro días después, J Balzer subió al WordPress de Genefish una publicación de un ensayo de resazurina en reproductores. Ostras en tres clases de tamaño, diez, cuarenta y setenta milímetros, más controles en placas de doce pocillos, incubadas a treinta y seis grados Celsius por cuatro horas, midiendo temperatura y fluorescencia cada treinta minutos. Después, una submuestra de la solución se corrió en una placa de noventa y seis pocillos para el análisis de punto final."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Con el mismo master mix?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Eso parece. El resumen rastrea la receta hasta una publicación del veintiuno de octubre: cinco coma ochenta y siete mililitros de de eme ese o y cincuenta y ocho coma setenta y cuatro mililitros de solución antibiótica agregados al stock de resazurina. No hay indicios de que la preocupación se haya abordado todavía, lo que no sorprende, porque se planteó apenas unos días antes."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Y la literatura dice algo?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Tres artículos revisados por pares, ninguno probando el escenario exacto que plantea Kathleen. Uno mapeó los genes de resistencia a antibióticos de la ostra del Pacífico, Magallana gigas, en cuatro sitios europeos, y encontró más de treinta y tres mil secuencias de genes de resistencia. Otro encontró que la estructura de la comunidad de Vibrio determina qué genes de resistencia de tipo betalactamasa circulan en ambientes de cultivo de ostras, con dinámicas que siguen la temperatura del agua de mar. Y un tercero mostró que el manejo del cultivo, en el fondo versus en jaulas flotantes, cambió de forma medible la diversidad del microbioma de las ostras."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "O sea, el microbioma de las ostras responde a cómo uno las trata, y ya traen harta capacidad de resistencia."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "La conclusión del resumen es que esto convierte la preocupación de Kathleen en una hipótesis plausible y comprobable, no en algo puramente teórico."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "La verdad, suena como un experimento paralelo bacán. Hacerle el ensayo a algunas ostras, dejar otras tranquilas y mirar el microbioma después. Pero eso es puro soñar despierto de mi parte, no es el plan de nadie."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Siguiendo con el calor, Hazel Abrahamson partió un experimento subletal y letal. La pregunta es si un precondicionamiento subletal con calor cambia la supervivencia y la fisiología frente a un estrés térmico letal posterior."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "El experimento de lo que no te mata te hace más fuerte."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Algo así. El dieciocho de noviembre, Hazel aplicó una exposición de una hora a treinta y siete grados Celsius, con mejor consistencia de temperatura, dentro de más o menos cero coma tres grados. Se muestreó un subconjunto de ostras, y el resto volvió a los estanques por una semana de recuperación antes de una exposición letal planificada a cuarenta y cuatro grados."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Y qué se mide?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Niveles de glucógeno, además de la expresión de genes de choque térmico y metabólicos. Es la continuación directa del diseño que Hazel planteó el veintiuno de octubre, ahora ya funcionando."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Expresión génica significa extracciones de a erre ene."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Que se toparon con un problema. El veinte, las extracciones se postergaron porque al laboratorio se le acabó la de nasa uno. Sam hizo un pedido nuevo, que debería llegar en una a dos semanas. Así que Hazel cambió de rumbo y se dedicó a redactar la sección de métodos de su tesis de pregrado."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "El mejor uso posible de un atraso de reactivos."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Último arco: el agua de los estanques. Jesse Lowe ha estado haciendo un ensayo de química del agua junto con los controles de rutina en la sala de estanques y en la sala SHORE."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Y el estanque de prueba está complicado."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Lo está. El dieciocho, después de un cambio total de agua en todos los estanques, el estanque de prueba marcó pe hache siete coma seis, alcalinidad ochenta, amoníaco en cero coma veinticinco partes por millón o más, nitrito en cero coma cinco y nitrato sobre doscientos. Para el veinte, la alcalinidad marcó cuarenta, y el resto más o menos igual. Mientras tanto, los estanques de mantención estándar se mantuvieron cerca de cero en amoníaco y nitrito."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Y la mortalidad?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Ninguna muerte nueva desde que el nitrato llegó a doscientas partes por millón. Tres en total en el ensayo hasta ahora."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Ese es el misterio. El agua así de mala, y las ostras como si nada."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Las publicaciones automatizadas de conexiones con la literatura de Cas Daniel se fijaron en eso dos veces esta semana. Citaron trabajos que muestran que la exposición sostenida al amoníaco provoca la muerte de hemocitos en ostras del Pacífico a través de un gen transportador de amoníaco sobreexpresado, y un preprint de Research Square en una especie relacionada, donde la alcalinidad elevada con baja salinidad suprime la excreción de amoníaco antes de que caiga la supervivencia. La segunda publicación agregó un artículo que muestra que una salinidad moderada optimiza la excreción de amoníaco mientras que los extremos la perjudican, y otro que vincula el amoníaco y el nitrato del ambiente con cambios del microbioma asociados a patógenos en ostras y choritos."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "¿Y el resumen agrega uno más?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Un estudio multiómico revisado por pares de Qiu y colaboradores. Ostras del Pacífico diploides bajo estrés por nitrógeno amoniacal por hasta cuarenta y ocho horas mostraron daño progresivo en el tejido del hepatopáncreas, además de cambios en la respuesta al estrés oxidativo, en el transporte y en el metabolismo de aminoácidos."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Entonces la idea en común es que la supervivencia podría ser lo último en moverse, y que la baja mortalidad podría estar tapando un estrés que se va acumulando. Pero ojo, eso es una hipótesis que viene de la literatura, no algo que los datos del estanque muestren todavía."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Claro. Habría que hacer mediciones fisiológicas para ponerla a prueba."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Y las ostras no fueron los únicos animales con problemas de agua."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "No. Samuel Slutz pasó varios días resolviendo problemas en un estanque de estrellas de mar, Aquilonastra, con nitrito y nitrato problemáticamente altos. Varios cambios parciales de agua seguidos y menos alimentación dejaron el amoníaco y el nitrito de nuevo cerca de cero. Samuel también probó un intercambio continuo de agua entre un balde auxiliar y el estanque principal, pero los caudales disparejos de las bombas lo echaron abajo, así que se volvió a la configuración estándar."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Dos bombas nunca se ponen de acuerdo, cachai. Y una nota bonita en esa publicación: Samuel armó un acuerdo de mentoría con Grace para trabajo de transcriptómica y bioinformática."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Lo que nos lleva de vuelta a Grace, cerrando el círculo."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Ya, para ir cerrando. Grace pilló un desfase de diez veces en la curva estándar y está evaluando cómo manejar las placas anteriores. El trabajo de Kathleen con la ostra del este sigue apuntando a una influencia paterna más fuerte en la metilación, y la base de anotación ya está lista para un test de enriquecimiento de verdad."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Kathleen también planteó una pregunta justa sobre el antibiótico del master mix de resazurina, justo cuando se estaban corriendo los ensayos en reproductores. El experimento de precondicionamiento térmico de Hazel está en marcha, esperando la de nasa. Y el estanque de prueba de Jesse sigue desafiando lo esperado, al menos en supervivencia."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Para estar atentos: la exposición a cuarenta y cuatro grados, los resultados de enriquecimiento de Kathleen y cómo se resuelve la corrección de la cu pe ce erre."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Gracias a todas las personas que trabajan en abierto. Ustedes hacen posible este programa."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Esto fue This Week in efe te erre. Soy Maya."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Y yo soy Theo. Nos escuchamos la próxima semana."
+    }
+  ],
+  "model": "claude-opus-5-5",
+  "usage": {
+    "input_tokens": 8903,
+    "output_tokens": 18113
+  }
+}

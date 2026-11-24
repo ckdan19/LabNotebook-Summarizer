@@ -11,7 +11,15 @@
       "post_url": "https://genefish.wordpress.com/2026/11/24/twif-s10e01-off-by-a-factor-of-ten/",
       "post_id": 10183,
       "audio_url": "https://genefish.wordpress.com/wp-content/uploads/2026/11/twif-s10e01.mp3",
-      "minutes": 16.2
+      "minutes": 16.2,
+      "spanish": {
+        "title": "TWIF S10E01 (Espa\u00f1ol) - La regla chueca por un factor de diez",
+        "status": "publish",
+        "post_url": "https://genefish.wordpress.com/2026/11/24/twif-s10e01-espanol-la-regla-chueca-por-un-factor-de-diez/",
+        "post_id": 10187,
+        "audio_url": "https://genefish.wordpress.com/wp-content/uploads/2026/11/twif-s10e01-es.mp3",
+        "minutes": 16.5
+      }
     }
   ]
 }
