@@ -79,6 +79,19 @@ class TestIsAutomated(unittest.TestCase):
         self.assertTrue(fetch_lab_posts.is_automated(
             {"title": "Something else", "categories": ["auto-literature-connections"]}))
 
+    def test_twif_podcast_title(self):
+        self.assertTrue(fetch_lab_posts.is_automated(
+            {"title": "TWIF S01E03 - Gene Bodies and Green Water", "categories": []}))
+
+    def test_podcast_category_any_case(self):
+        self.assertTrue(fetch_lab_posts.is_automated(
+            {"title": "This week in the lab", "categories": ["Podcast"]}))
+
+    def test_title_starting_with_twif_word_only(self):
+        # "Twifold" is not a TWIF episode; the prefix needs the trailing space.
+        self.assertFalse(fetch_lab_posts.is_automated(
+            {"title": "Twifold symmetry in larval shells", "categories": []}))
+
     def test_ordinary_lab_post_kept(self):
         self.assertFalse(fetch_lab_posts.is_automated(
             {"title": "11.18: first exposure for sublethal/lethal experiment",

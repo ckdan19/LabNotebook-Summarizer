@@ -15,7 +15,7 @@ Run the helper script from the repository root (the working directory Claude Cod
 python3 scripts/fetch_lab_posts.py --exclude-automated
 ```
 
-Pass `--days N` as well if a window other than 7 days is requested. Always keep `--exclude-automated`: it drops the posts this repo's own automation publishes to the site ("Daily Literature Connections" and "Full Lab Digest" posts), which are summaries of the lab's notebooks rather than lab work. Do not report those posts even if one slips through.
+Pass `--days N` as well if a window other than 7 days is requested. Always keep `--exclude-automated`: it drops the posts this repo's own automation publishes to the site ("Daily Literature Connections", "Full Lab Digest" and "TWIF" podcast posts), which are summaries of the lab's notebooks rather than lab work. Do not report those posts even if one slips through.
 
 The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts published in the window (counted in US Pacific calendar days, ending today), strips HTML, and outputs JSON with keys: `week_start` and `today` (ISO date strings — use these in the header), `excluded_automated` (how many automated posts were dropped), `posts` (array of objects with `author`, `date`, `title`, `url`, `content`), and `warnings` (array of strings).
 

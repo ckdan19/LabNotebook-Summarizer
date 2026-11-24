@@ -16,7 +16,7 @@ All paths in this skill are relative to the repository root, which is the workin
    python3 scripts/fetch_lab_posts.py --exclude-automated
    ```
 
-   The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts from the last 7 days (US Pacific calendar days, ending today), strips HTML, and outputs JSON with keys `week_start`, `today`, `excluded_automated`, `posts` (objects with `author`, `date`, `title`, `url`, `content`), and `warnings`. Pass `--days N` for a different window. `--exclude-automated` drops the repo's own "Daily Literature Connections" and "Full Lab Digest" posts — keep it, and never report those posts in the digest.
+   The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts from the last 7 days (US Pacific calendar days, ending today), strips HTML, and outputs JSON with keys `week_start`, `today`, `excluded_automated`, `posts` (objects with `author`, `date`, `title`, `url`, `content`), and `warnings`. Pass `--days N` for a different window. `--exclude-automated` drops the repo's own "Daily Literature Connections", "Full Lab Digest" and "TWIF" podcast posts — keep it, and never report those posts in the digest.
 
    **Check `warnings`** — if it is non-empty, surface each entry to the user alongside the digest (it flags skipped records or a window that may be missing older posts). If the script exits non-zero it prints `{"error": "..."}`; report that and stop.
 
