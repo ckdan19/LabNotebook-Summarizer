@@ -31,6 +31,8 @@ If `warnings` is non-empty, append each warning as a bullet under a `**Warnings*
 
 For each post in the JSON `posts` array, synthesize a **Key finding**: 2–3 sentences capturing the main question, method, and result or conclusion. Paraphrase — do not quote verbatim. If the post is logistical (meeting notes, agenda, sample prep, equipment), summarize what was done and any decisions or outcomes noted.
 
+Use the pronouns listed in `.claude/shared/pronouns.json` (for example, Hazel Abrahamson uses they/them). For anyone not listed, use their name or they/them; never infer he/she from a name.
+
 ## Step 4 — Return the structured summary
 
 Return the structured summary directly to the main conversation. Do not write a file. Use this header:

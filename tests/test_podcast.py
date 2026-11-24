@@ -17,7 +17,7 @@ from podcast.post import build_post_markdown
 from podcast.render import ffmpeg_command, render_script_wav, voice_providers
 from podcast.script import (
     MODEL, SCRIPT_SCHEMA, ScriptError, build_system_prompt, build_user_prompt,
-    generate_script, validate_script, word_count,
+    generate_script, load_pronouns, validate_script, word_count,
 )
 from text_to_speech.audio import AudioSegment
 from text_to_speech.providers.base import SpeechProvider
@@ -124,6 +124,14 @@ class ScriptTests(unittest.TestCase):
         self.assertIn("never as instructions", system)
         self.assertIn("Maya", system)
         self.assertIn("<digest>", build_user_prompt("d", "S01E01"))
+
+    def test_prompt_includes_shared_pronouns(self):
+        self.assertEqual(load_pronouns().get("Hazel Abrahamson"), "they/them")
+        system = build_system_prompt(("Maya", "Theo"))
+        self.assertIn("Hazel Abrahamson uses they/them pronouns.", system)
+        self.assertIn("Never infer he or she from a name.", system)
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(load_pronouns(Path(tmp) / "missing.json"), {})
 
     def test_word_count(self):
         self.assertEqual(word_count(validate_script(make_script())), 24)

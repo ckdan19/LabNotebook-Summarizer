@@ -1,0 +1,6 @@
+{
+  "_about": "Pronouns for people who appear in lab notebook summaries, digests, and TWIF podcast scripts. Use exactly these. For anyone not listed, use their name or they/them; never infer he/she from a name. Read by podcast/script.py and referenced by the digest agents and skills.",
+  "people": {
+    "Hazel Abrahamson": "they/them"
+  }
+}

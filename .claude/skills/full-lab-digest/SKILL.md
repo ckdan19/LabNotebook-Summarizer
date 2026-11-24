@@ -8,6 +8,8 @@ Runs all seven lab-notebook subagents in parallel, collects their summaries, and
 
 The skill keeps persistent state in `digests/.digest-state.json` so that a post already covered in a previous digest is never covered again, even if it still falls inside the requested window. That file is committed to the repo (never gitignored) so the de-duplication works across machines and collaborators.
 
+Anything the skill writes about people, including the cross-notebook and literature sections, uses the pronouns in `.claude/shared/pronouns.json` (for example, Hazel Abrahamson uses they/them). For anyone not listed, use their name or they/them.
+
 ## Steps
 
 1. **Determine the window**: set `days` to the number of days the user asked for (e.g. "the last 14 days", "past month" → 30). If the user did not specify a window, `days` = 7. Use this same `days` value everywhere below.
