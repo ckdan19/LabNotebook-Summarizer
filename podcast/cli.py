@@ -112,9 +112,12 @@ def _save_script(script: Dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(script, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def produce(script: Dict[str, Any], *, title: str, stem: str, language: str, episode: int,
-            date_range: str, args, other_edition_url: str = "") -> Dict[str, Any]:
-    """Voice ``script``, encode MP3, and (unless --no-publish) upload and post it."""
+SPANISH_ERRORS = (PipelineError, ScriptError, OSError, ValueError, RuntimeError)
+
+
+def make_audio(script: Dict[str, Any], *, title: str, stem: str, language: str,
+               episode: int, args) -> Dict[str, Any]:
+    """Voice ``script`` with Kokoro and encode it to MP3. Returns title, mp3, minutes."""
     from text_to_speech.providers import create_provider
     from .render import LANGUAGES, duration_minutes, encode_mp3, render_script_wav, voice_providers
 
@@ -140,56 +143,77 @@ def produce(script: Dict[str, Any], *, title: str, stem: str, language: str, epi
         "language": config["id3_lang"],
     })
     wav.unlink()
-    result: Dict[str, Any] = {"title": title, "mp3": str(mp3), "minutes": round(minutes, 1)}
-    if args.no_publish:
-        result["status"] = "audio generated (not uploaded)"
-        return result
+    return {"title": title, "mp3": str(mp3), "minutes": round(minutes, 1),
+            "_minutes": minutes}
 
-    upload = _run_json([sys.executable, str(SCRIPTS_DIR / "upload_media.py"), str(mp3),
-                        "--title", title])
-    audio_url = upload["url"]
+
+def upload_audio(audio: Dict[str, Any]) -> None:
+    """Upload the MP3 to the WordPress media library; adds ``audio_url``."""
+    upload = _run_json([sys.executable, str(SCRIPTS_DIR / "upload_media.py"), audio["mp3"],
+                        "--title", audio["title"]])
+    audio["audio_url"] = upload["url"]
+
+
+def publish_post(script: Dict[str, Any], audio: Dict[str, Any], *, stem: str, language: str,
+                 date_range: str, args, other_edition_url: str = "") -> None:
+    """Create the WordPress post for an uploaded edition; adds status/post_url/post_id."""
     post_md = OUTPUT_DIR / (stem + "-post.md")
     post_md.write_text(
-        build_post_markdown(title, script, audio_url, minutes, date_range,
-                            language=language, other_edition_url=other_edition_url),
+        build_post_markdown(audio["title"], script, audio["audio_url"], audio["_minutes"],
+                            date_range, language=language,
+                            other_edition_url=other_edition_url),
         encoding="utf-8",
     )
     try:
         post = _run_json([sys.executable, str(SCRIPTS_DIR / "publish_digest.py"), str(post_md),
                           "--category", CATEGORIES[language], "--status", args.status])
     except PipelineError as exc:
-        raise PipelineError("{} (the MP3 was already uploaded: {})".format(exc, audio_url))
+        raise PipelineError("{} (the MP3 was already uploaded: {})".format(
+            exc, audio["audio_url"]))
     _save_script(script, SCRIPT_DIR / (stem + ".json"))
-    result.update({
+    audio.update({
         "status": post.get("post_status", args.status),
         "post_url": post.get("url", ""),
         "post_id": post.get("post_id", ""),
-        "audio_url": audio_url,
     })
-    return result
+
+
+def _public(result: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in result.items() if not k.startswith("_")}
+
+
+def spanish_script(english: Dict[str, Any], *, season: int, episode: int, args):
+    """Adapt (or reuse) the Spanish script. Returns (script, script_file)."""
+    label = episodes.episode_label(season, episode)
+    if getattr(args, "spanish_script_file", None):
+        return _load_script(args.spanish_script_file), args.spanish_script_file
+    spanish = adapt_to_spanish(english, label, hosts=tuple(args.hosts), model=args.model)
+    script_file = str(OUTPUT_DIR / "TWIF-{}-es.json".format(label))
+    _save_script(spanish, Path(script_file))
+    return spanish, script_file
 
 
 def spanish_edition(english: Dict[str, Any], *, season: int, episode: int, date_range: str,
                     args, english_post_url: str = "") -> Dict[str, Any]:
-    """Adapt (or reuse) the Spanish script, then voice and publish it."""
+    """Make the Spanish edition on its own: script, audio, upload, post."""
     label = episodes.episode_label(season, episode)
     stem = "TWIF-{}-es".format(label)
-    if getattr(args, "spanish_script_file", None):
-        spanish = _load_script(args.spanish_script_file)
-        script_file = args.spanish_script_file
-    else:
-        spanish = adapt_to_spanish(english, label, hosts=tuple(args.hosts), model=args.model)
-        script_file = str(OUTPUT_DIR / (stem + ".json"))
-        _save_script(spanish, Path(script_file))
+    spanish, script_file = spanish_script(english, season=season, episode=episode, args=args)
     title = episodes.post_title(season, episode, spanish["episode_title"], language="es")
     if args.dry_run:
         return {"title": title, "script_file": script_file, "words": word_count(spanish),
                 "description": spanish.get("description", ""),
                 "status": "script written (dry run)"}
-    result = produce(spanish, title=title, stem=stem, language="es", episode=episode,
-                     date_range=date_range, args=args, other_edition_url=english_post_url)
-    result["script_file"] = script_file
-    return result
+    audio = make_audio(spanish, title=title, stem=stem, language="es", episode=episode,
+                       args=args)
+    audio["script_file"] = script_file
+    if args.no_publish:
+        audio["status"] = "audio generated (not uploaded)"
+        return _public(audio)
+    upload_audio(audio)
+    publish_post(spanish, audio, stem=stem, language="es", date_range=date_range, args=args,
+                 other_edition_url=english_post_url)
+    return _public(audio)
 
 
 def _record_spanish(season: int, episode: int, result: Dict[str, Any]) -> None:
@@ -208,6 +232,9 @@ def _record_spanish(season: int, episode: int, result: Dict[str, Any]) -> None:
 
 
 def cmd_run(args) -> int:
+    """Both editions. Order: scripts -> both MP3s uploaded -> English post (linking the
+    Spanish audio) -> Spanish post (linking the English post). A Spanish failure at any
+    step leaves the English episode intact and makes the run exit 2."""
     info = plan(args)
     if "skip" in info:
         _emit({"status": "skipped", **info})
@@ -220,6 +247,7 @@ def cmd_run(args) -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     script_path = OUTPUT_DIR / "TWIF-{}.json".format(label)
 
+    # --- scripts --------------------------------------------------------------
     if args.script_file:
         script = _load_script(args.script_file)
     else:
@@ -235,43 +263,82 @@ def cmd_run(args) -> int:
         "turns": len(script["segments"]),
     }
 
+    spanish: Dict[str, Any] = {}
+    es_script = None
+    if not args.no_spanish:
+        try:
+            es_script, es_file = spanish_script(script, season=season, episode=number,
+                                                   args=args)
+            spanish = {"title": episodes.post_title(season, number, es_script["episode_title"],
+                                                    language="es"),
+                       "script_file": es_file, "words": word_count(es_script)}
+        except SPANISH_ERRORS as exc:
+            spanish = {"error": str(exc)}
+
+    def finish() -> int:
+        if not args.no_spanish:
+            report["spanish"] = _public(spanish)
+        _emit(report)
+        return 2 if "error" in spanish else 0
+
     if args.dry_run:
         report["status"] = "script written (dry run: no audio, no upload, no post)"
         report["description"] = script.get("description", "")
-    else:
-        english = produce(script, title=title, stem="TWIF-{}".format(label), language="en",
-                          episode=number, date_range=date_range, args=args)
-        report.update(english)
-        if "post_url" in english:
-            entry = {
-                "season": season,
-                "episode": number,
-                "title": title,
-                "digest": digest.name,
-                "published": date.today().isoformat(),
-                "status": english["status"],
-                "post_url": english["post_url"],
-                "post_id": english["post_id"],
-                "audio_url": english["audio_url"],
-                "minutes": english["minutes"],
-            }
-            episodes.save_state(episodes.record_episode(episodes.load_state(), entry))
+        if es_script is not None:
+            spanish["description"] = es_script.get("description", "")
+            spanish["status"] = "script written (dry run)"
+        return finish()
 
-    if args.no_spanish:
-        _emit(report)
-        return 0
-    try:
-        spanish = spanish_edition(script, season=season, episode=number, date_range=date_range,
-                                  args=args, english_post_url=report.get("post_url", ""))
-    except (PipelineError, ScriptError, OSError, ValueError, RuntimeError) as exc:
-        report["spanish"] = {"error": str(exc)}
-        _emit(report)
-        return 2
-    report["spanish"] = spanish
-    if not args.dry_run:
-        _record_spanish(season, number, spanish)
-    _emit(report)
-    return 0
+    # --- audio (and upload) for both editions ---------------------------------
+    english = make_audio(script, title=title, stem="TWIF-{}".format(label), language="en",
+                         episode=number, args=args)
+    if not args.no_publish:
+        upload_audio(english)
+    if es_script is not None:
+        try:
+            spanish.update(make_audio(es_script, title=spanish["title"],
+                                      stem="TWIF-{}-es".format(label), language="es",
+                                      episode=number, args=args))
+            if not args.no_publish:
+                upload_audio(spanish)
+        except SPANISH_ERRORS as exc:
+            spanish["error"] = str(exc)
+
+    if args.no_publish:
+        english["status"] = "audio generated (not uploaded)"
+        if "mp3" in spanish and "error" not in spanish:
+            spanish["status"] = "audio generated (not uploaded)"
+        report.update(_public(english))
+        return finish()
+
+    # --- posts: English first, linking the Spanish audio ----------------------
+    spanish_audio_url = spanish.get("audio_url", "") if "error" not in spanish else ""
+    publish_post(script, english, stem="TWIF-{}".format(label), language="en",
+                 date_range=date_range, args=args, other_edition_url=spanish_audio_url)
+    report.update(_public(english))
+    entry = {
+        "season": season,
+        "episode": number,
+        "title": title,
+        "digest": digest.name,
+        "published": date.today().isoformat(),
+        "status": english["status"],
+        "post_url": english["post_url"],
+        "post_id": english["post_id"],
+        "audio_url": english["audio_url"],
+        "minutes": english["minutes"],
+    }
+    episodes.save_state(episodes.record_episode(episodes.load_state(), entry))
+
+    if "audio_url" in spanish and "error" not in spanish:
+        try:
+            publish_post(es_script, spanish, stem="TWIF-{}-es".format(label), language="es",
+                         date_range=date_range, args=args,
+                         other_edition_url=english["post_url"])
+            _record_spanish(season, number, spanish)
+        except SPANISH_ERRORS as exc:
+            spanish["error"] = str(exc)
+    return finish()
 
 
 def cmd_spanish(args) -> int:

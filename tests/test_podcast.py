@@ -413,13 +413,19 @@ class CliTests(unittest.TestCase):
         self.assertEqual(report["post_id"], 42)
         self.assertEqual(report["minutes"], 12.0)
         self.assertEqual(report["spanish"]["post_id"], 43)
-        # English then Spanish: upload, post, upload, post.
-        self.assertEqual(len(commands), 4)
-        en_post, es_post = commands[1], commands[3]
+        # Both uploads first, then the English post, then the Spanish post.
+        self.assertEqual([Path(c[1]).name for c in commands],
+                         ["upload_media.py", "upload_media.py",
+                          "publish_digest.py", "publish_digest.py"])
+        en_post, es_post = commands[2], commands[3]
         self.assertEqual(en_post[en_post.index("--category") + 1], "podcast")
+        en_md = Path(en_post[2]).read_text()
+        self.assertIn("**Spanish edition (en español):** <https://x/twif-es.mp3>", en_md)
+        # The English audio stays the post's first (feed enclosure) audio.
+        self.assertLess(en_md.index("https://x/twif.mp3"), en_md.index("https://x/twif-es.mp3"))
         self.assertEqual(es_post[es_post.index("--category") + 1], "podcast-es")
         self.assertEqual(es_post[es_post.index("--status") + 1], "publish")
-        self.assertIn('[audio mp3="https://x/twif.mp3"]', Path(en_post[2]).read_text())
+        self.assertIn('[audio mp3="https://x/twif.mp3"]', en_md)
         es_md = Path(es_post[2]).read_text()
         self.assertTrue(es_md.startswith("# TWIF S10E01 (Español) - Ostras a Toda Temperatura"))
         self.assertIn('[audio mp3="https://x/twif-es.mp3"]', es_md)
@@ -451,6 +457,31 @@ class CliTests(unittest.TestCase):
         recorded = json.loads(self.state.read_text())["episodes"][0]
         self.assertEqual(recorded["post_id"], 42)
         self.assertNotIn("spanish", recorded)
+        self.assertEqual(len(commands), 2)
+        self.assertNotIn("Spanish edition", Path(commands[1][2]).read_text())
+
+    def test_spanish_audio_failure_still_posts_english_without_link(self):
+        commands = []
+        fake_render, fake_run_json = self._fakes(commands)
+
+        def render(segments, output, providers, progress=None, **kw):
+            if output.name.endswith("-es.wav"):
+                raise RuntimeError("Kokoro synthesis failed: no Spanish voice")
+            return fake_render(segments, output, providers)
+
+        with patch.object(cli, "generate_script", return_value=validate_script(make_script())), \
+             patch.object(cli, "adapt_to_spanish", return_value=spanish_script()), \
+             patch("text_to_speech.providers.create_provider", return_value=Tone()), \
+             patch("podcast.render.render_script_wav", side_effect=render), \
+             patch("podcast.render.encode_mp3"), \
+             patch.object(cli, "_run_json", side_effect=fake_run_json):
+            report = self.run_cli("run", "--digest", str(self.digest))
+        self.assertEqual(self.code, 2)
+        self.assertIn("no Spanish voice", report["spanish"]["error"])
+        self.assertEqual(report["post_id"], 42)
+        self.assertEqual([Path(c[1]).name for c in commands],
+                         ["upload_media.py", "publish_digest.py"])
+        self.assertNotIn("Spanish edition", Path(commands[1][2]).read_text())
 
     def test_spanish_command_remakes_latest_episode(self):
         episodes.save_state({"season": 10, "episodes": [
