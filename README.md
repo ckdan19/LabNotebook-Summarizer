@@ -281,7 +281,7 @@ full lab digest. One Claude API call (`claude-opus-5-5`, structured JSON output)
 a 10–15 minute conversational script grounded only in the digest. Kokoro voices the two
 hosts (`af_heart` and `am_michael`), and ffmpeg encodes the result to MP3. The MP3 is
 uploaded to the WordPress media library and published to genefish.wordpress.com in the
-`podcast` category, titled `TWIF S01EXX - <catchy title>`. The post embeds the audio
+`podcast` category, titled `TWIF S10EXX - <catchy title>`. The post embeds the audio
 with an `[audio]` shortcode, so the category feed has an episode enclosure.
 
 ```bash

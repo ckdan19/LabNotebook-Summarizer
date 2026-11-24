@@ -31,7 +31,7 @@ Paths are relative to the repository root.
    .venv-tts/bin/python -m podcast next
    ```
 
-   Report the digest, the episode label (for example `S01E03`), and any `skip` reason.
+   Report the digest, the episode label (for example `S10E03`), and any `skip` reason.
 
 2. Write the script only. This makes one Claude API call and nothing else:
 
@@ -46,7 +46,7 @@ Paths are relative to the repository root.
    is not called a second time:
 
    ```bash
-   .venv-tts/bin/python -m podcast run --script-file podcast/output/TWIF-S01EXX.json
+   .venv-tts/bin/python -m podcast run --script-file podcast/output/TWIF-S10EXX.json
    ```
 
    This publishes **live** by default. Add `--status draft` if the user wants a draft, or

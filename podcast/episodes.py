@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATE_FILE = REPO_ROOT / "podcast" / "episodes.json"
 DIGEST_DIR = REPO_ROOT / "digests"
-SEASON = 1
+SEASON = 10  # the show started at season 10
 
 DIGEST_NAME_RE = re.compile(r"^full-lab-digest-(\d{4}-\d{2}-\d{2})-7d\.md$")
 
