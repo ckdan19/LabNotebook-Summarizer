@@ -6,7 +6,8 @@ lab podcast.
 
 TWIF is a two-host podcast built from the newest weekly full lab digest
 (`digests/full-lab-digest-YYYY-MM-DD-7d.md`). Every episode is published in English and
-as a Chilean Spanish adaptation. The `podcast` package does all of the work.
+as a Chilean Spanish adaptation. The English post links the Spanish audio, and the
+Spanish post links the English post. The `podcast` package does all of the work.
 This skill only runs it and reports the result. It normally runs every Wednesday from
 `.github/workflows/twif-podcast.yml`. Use this skill for a manual or local run.
 

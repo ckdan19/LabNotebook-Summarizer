@@ -23,7 +23,7 @@ LABELS = {
         "running": "**Running time:** about {minutes} minutes. **Download:** <{url}>",
         "covers": "Covers lab notebook activity from {range}, as compiled in that week's "
                   "Full Lab Digest.",
-        "other": "Spanish edition: <{url}>",
+        "other": "**Spanish edition (en español):** <{url}>",
         "credit": "_Script written with Claude from the weekly lab digest; voices generated "
                   "with the Kokoro text-to-speech engine._",
     },

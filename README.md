@@ -289,6 +289,10 @@ full lab digest. Each episode is published twice:
   wording. The post goes in the `podcast-es` category, titled
   `TWIF S10EXX (Español) - <título>`, and links to the English episode.
 
+Both MP3s are made and uploaded before either post is created, so the English post can
+link the Spanish audio ("Spanish edition (en español)") and the Spanish post can link the
+English post. If the Spanish edition fails, the English post goes out without that link.
+
 ffmpeg encodes each edition to MP3. Posts embed the audio with an `[audio]` shortcode, so
 each category feed has an episode enclosure. Both categories must already exist on
 genefish.wordpress.com, because the token cannot create them.
