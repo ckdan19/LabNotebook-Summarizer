@@ -59,6 +59,10 @@ repo that was quiet entirely from one that merely had no post changes.
 
 ## Step 3 — Summarize each post
 
+When a summary refers to a person, use the pronouns listed in
+`.claude/shared/pronouns.json`. For anyone not listed, use their name or they/them;
+never infer he/she from a name.
+
 For posts with `change_class: substantive`, parse `content` and extract:
 
 - **Front matter** (between the opening `---` and closing `---`): the fields listed

@@ -6,6 +6,7 @@ package (and the stdlib-only test suite) never needs it installed.
 
 import json
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 MODEL = "claude-opus-5-5"
@@ -57,8 +58,31 @@ SCRIPT_SCHEMA: Dict[str, Any] = {
 }
 
 
-def build_system_prompt(hosts=DEFAULT_HOSTS) -> str:
+PRONOUNS_FILE = Path(__file__).resolve().parent.parent / ".claude" / "shared" / "pronouns.json"
+
+
+def load_pronouns(path: Path = PRONOUNS_FILE) -> Dict[str, str]:
+    """Return {name: pronouns} from the shared pronoun list, or {} if it is absent."""
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {str(k): str(v) for k, v in (data.get("people") or {}).items()}
+
+
+def pronoun_rules(pronouns: Dict[str, str]) -> str:
+    lines = ["Pronouns:"]
+    lines += ["- {} uses {} pronouns.".format(name, value) for name, value in sorted(pronouns.items())]
+    lines.append(
+        "- For anyone else, use their name or they/them. Never infer he or she from a name."
+    )
+    return "\n".join(lines)
+
+
+def build_system_prompt(hosts=DEFAULT_HOSTS, pronouns: Optional[Dict[str, str]] = None) -> str:
     host_a, host_b = hosts
+    if pronouns is None:
+        pronouns = load_pronouns()
+    pronoun_block = pronoun_rules(pronouns)
     low, high = TARGET_WORDS
     return f"""You write the script for "{SHOW_NAME}" (TWIF), a weekly podcast about research \
 documented in the Roberts Lab's open lab notebooks over the past week. Listeners are \
@@ -81,6 +105,8 @@ Accuracy rules:
 quotes. If something is uncertain or still in progress, say so.
 - Credit the researcher by name when discussing their work.
 - Hosts may react, speculate lightly, and ask questions, but must mark speculation as such.
+
+{pronoun_block}
 
 Write for the ear, because a text-to-speech engine will voice every word:
 - No URLs, file names, markdown, bullet points, stage directions, sound-effect cues, or emoji.
