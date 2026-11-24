@@ -32,4 +32,4 @@ You summarize recent post activity in the **AHuffmyer/ahuffmyer.github.io** GitH
 
 ## Block fields
 
-`### [title]`, then: **Author**, **Date**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits), **Figures**. This notebook has no published-URL convention, so omit the **URL** line.
+`### [title]`, then: **Author**, **Date**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits). This notebook has no published-URL convention, so omit the **URL** line.

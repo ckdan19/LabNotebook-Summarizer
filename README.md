@@ -280,7 +280,7 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 
 | Skill | Description |
 |---|---|
-| `full-lab-digest` | Runs all seven source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis, multi-week **Historical Connections** drawn from the local archive, a consolidated **Data & Figures** section, and literature connections |
+| `full-lab-digest` | Runs all seven source subagents in parallel and compiles a combined digest with cross-notebook pattern analysis, multi-week **Historical Connections** drawn from the local archive and literature connections |
 | `weekly-lab-digest` | Fetches WordPress posts and produces a per-author digest |
 | `daily-literature-post` | Narrow daily counterpart to `full-lab-digest`: keeps only the last day's posts that describe a real scientific finding, runs `literature-connector` on each, and publishes one combined post. Publishes **live** only when authorized (see below); draft otherwise |
 | `literature-connector` | Queries PubMed and the preprint servers indexed by Europe PMC (bioRxiv, medRxiv, Research Square, …) for papers published in the last 12 months and categorizes their relationship to a given lab finding (Supports / Conflicts / Adds context / Suggests next step) |
@@ -300,7 +300,7 @@ Beyond pasting each subagent's summary verbatim, `full-lab-digest` derives three
 
 **Historical Connections** — a subsection nested inside the above that looks *past* the current window for multi-week story arcs the single-window analysis cannot see. It read-only-queries the same `.cache/archive.db` the `lab-archive` skill uses, scoped to the **8 weeks ending the day before the current window starts**. Excluding the current window is deliberate: nothing already shown in the per-source sections can reappear here, and any archived post already cited elsewhere in the digest is discarded as a second guard. It reuses exactly the same set of findings the literature search runs on, so the two sections stay in sync. Archived posts whose permalink is shared with another post in the same notebook carry a `⚠️ shadowed URL` caveat.
 
-**Data & Figures** — a consolidated, per-source entry point into the window's underlying figure links and external data/repository links, gathered from what the subagents already surfaced. It is a pure reorganization step: no new fetches, no new subagent runs, and no invented links. Third-party tool repositories and issue-tracker threads are routed to a separate `Related links (tools, issues)` line so they do not crowd out the lab's own data. A source with no links is left out; if the window has no links at all, the section is omitted entirely.
+**Date window** — every fetcher counts the window in US Pacific calendar days ending today (`notebook_parsing.digest_window`), and the digest header uses the dates the fetchers report, so what is fetched always matches the range in the title. A GitHub post first committed this week but dated earlier in its front matter is kept and marked **⚠ Backdated**. The repo's own automated WordPress posts (Daily Literature Connections, Full Lab Digest) are left out of the digest.
 
 ### Changing the time window
 
@@ -332,7 +332,6 @@ Generated digests are saved to the `digests/` directory as Markdown files, named
 - **`full-lab-digest-YYYY-MM-DD-Nd.md`** — Full multi-source digests, named by end date and window length (`-7d` by default). Files predating this convention omit the `-Nd` suffix. Each includes:
   - Per-notebook summaries (all seven sources)
   - Cross-notebook pattern detection (shared species, assays, and themes), including a **Historical Connections** subsection that reaches back into the archive for multi-week story arcs
-  - A **Data & Figures** section consolidating the window's figure and data links by source
   - Literature connections via PubMed and bioRxiv
 
 Two state files sit alongside them and are committed so de-duplication holds across machines: `.digest-state.json` (post URLs already digested) and `.literature-state.json` (post URLs already connected to literature, plus the daily post's publish log).

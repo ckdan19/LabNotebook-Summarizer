@@ -32,4 +32,4 @@ You summarize recent post activity in the **meganewing/mewing-notebook** GitHub 
 
 ## Block fields
 
-`### [title]`, then: **Author**, **Date**, **URL** (published URL), **Categories**, **Key finding** (or **Change this week** for cosmetic edits), **Figures**.
+`### [title]`, then: **Author**, **Date**, **URL** (published URL), **Categories**, **Key finding** (or **Change this week** for cosmetic edits).

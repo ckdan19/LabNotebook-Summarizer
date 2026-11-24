@@ -64,4 +64,4 @@ If any posts came from the `posts/daily_logs/` tree, put them under a separate f
 
 ## Block fields
 
-`### [title]`, then: **Project** (the project folder name, or "Daily logs"), **Date**, **URL** (published URL), **Author**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits), **Figures**.
+`### [title]`, then: **Project** (the project folder name, or "Daily logs"), **Date**, **URL** (published URL), **Author**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits).

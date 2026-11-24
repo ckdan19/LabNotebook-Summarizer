@@ -9,7 +9,61 @@ same classification and body-trimming rules.
 
 import os
 import re
-from datetime import datetime
+from datetime import date, datetime, time, timedelta, timezone
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python < 3.9
+    ZoneInfo = None
+
+# The lab works on US Pacific time. Digest windows are counted in Pacific
+# calendar days so that a run firing in the Pacific evening (already "tomorrow"
+# in UTC) still labels and fetches the week the lab actually lived through.
+LAB_TIMEZONE = "America/Los_Angeles"
+
+
+def _lab_tz():
+    if ZoneInfo is not None:
+        try:
+            return ZoneInfo(LAB_TIMEZONE)
+        except Exception:  # no tz database on this machine
+            pass
+    return timezone(timedelta(hours=-8))  # PST; off by an hour in summer at worst
+
+
+def digest_window(days: int, now: datetime = None) -> tuple:
+    """The `days`-day window ending today, in lab-local calendar days.
+
+    Returns (week_start, today, cutoff): `week_start` and `today` are `date`s
+    (both inclusive) and `cutoff` is the aware UTC datetime of local midnight at
+    the start of `week_start`. Every fetcher filters on `cutoff` and every
+    digest header prints `week_start`..`today`, so what is fetched and what the
+    header claims can no longer disagree.
+    """
+    if days < 1:
+        raise ValueError("days must be >= 1")
+    tz = _lab_tz()
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    today = now.astimezone(tz).date()
+    week_start = today - timedelta(days=days - 1)
+    cutoff = datetime.combine(week_start, time.min, tzinfo=tz).astimezone(timezone.utc)
+    return week_start, today, cutoff
+
+
+def is_backdated(status: str, fm_date, week_start: date) -> bool:
+    """True for a post first added in the window whose front-matter date predates it.
+
+    Such a post is new to readers (it was never committed before) but its
+    author dated it earlier — e.g. a write-up of Nov 4 work pushed on Nov 23.
+    """
+    if status != "added" or not fm_date:
+        return False
+    try:
+        return date.fromisoformat(fm_date) < week_start
+    except ValueError:
+        return False
 
 
 def clip(text: str, limit: int) -> tuple:

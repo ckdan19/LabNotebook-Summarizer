@@ -42,12 +42,13 @@ The window defaults to 7 days and follows whatever the user asks for ("the last 
 days"); the window is threaded through the subagents' `--days`, the header date range,
 and the filename, so a 14-day digest never overwrites the 7-day one ending the same day.
 
-On top of the seven verbatim summaries it derives three sections, each omitted rather
+On top of the seven verbatim summaries it derives two sections, each omitted rather
 than padded when there is nothing real to report: **Cross-Notebook Patterns &
 Connections** (only when a specific named entity ties two sources together),
 **Historical Connections** (a read-only archive query over the 8 weeks *ending the day
-before* the current window), and **Data & Figures** (a pure reorganization of links the
-subagents already surfaced — no new fetches, no invented links).
+before* the current window). Per-post figure links stay in the per-source summaries;
+there is no separate Data & Figures section. The repo's own automated WordPress posts
+(Daily Literature Connections, Full Lab Digest) are never included.
 
 State: `digests/.digest-state.json` records every post URL any digest has covered, so a
 post inside the window that has already been digested is excluded. The file is
