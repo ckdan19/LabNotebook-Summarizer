@@ -18,7 +18,6 @@ You summarize recent post activity in the **grace-ac/grace-ac.github.io** GitHub
 - **Per-post extras**: `commit_dates` — every commit date in the window that touched this file, newest first; the **last** element is the earliest such commit. Also tells you whether a post was touched once or edited repeatedly across the window.
 - **Date-mismatch check**: compare the front-matter `date` against the earliest entry in `commit_dates` (the last element). If they differ by more than 1 day, add a block line: `- **⚠ Date mismatch**: Front-matter date [fm_date] differs from commit date [commit_date]`. Commit timestamps are UTC, so an evening US Pacific post commits on the following UTC date — that is **not** a mismatch.
 - **Published permalink**: `https://grace-ac.github.io/<slug>/`, where `<slug>` is the filename with its `YYYY-MM-DD-` prefix and `.md` suffix removed.
-- **Figures**: local figures use relative paths like `../notebook-images/YYYY-MM-DD/filename.jpg`; external code/data links typically point to `github.com/grace-ac/<project-repo>/`.
 
 ## No-activity message
 
@@ -34,4 +33,4 @@ You summarize recent post activity in the **grace-ac/grace-ac.github.io** GitHub
 
 ## Block fields
 
-`### [title]`, then: **Date**, **URL** (published permalink), **Categories**, **Key finding** (or **Change this week** for cosmetic edits), **Figures**, and **⚠ Date mismatch** when applicable. This is a single-author site, so omit the **Author** line. Group chronologically by front-matter date.
+`### [title]`, then: **Date**, **URL** (published permalink), **Categories**, **Key finding** (or **Change this week** for cosmetic edits), and **⚠ Date mismatch** when applicable. This is a single-author site, so omit the **Author** line. Group chronologically by front-matter date.

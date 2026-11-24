@@ -68,19 +68,15 @@ For posts with `change_class: substantive`, parse `content` and extract:
   exist. Do not quote verbatim — paraphrase. If the post is logistical (meeting
   notes, sample prep, equipment setup, software install, data received), summarize
   what was done and any decisions or outcomes noted.
-- **Figure links**: scan `content` for both syntaxes and capture each URL:
-  - Markdown: `![alt](url)`
-  - HTML: `<img src="url"`
 
-  Classify each as `local` (relative path, no `http`) or `external` (starts with
-  `http`).
+Do **not** list figures or image links. The digest has no figure lists; readers
+follow the post URL to see a post's figures.
 
 For posts with `change_class: cosmetic`, the post is not new work — it was only
 lightly edited this week. Still report its front-matter fields, but replace the
 **Key finding** line with a **Change this week** line describing what the `patch`
 actually did (e.g. "corrected a broken repo link, no new science content"). Do not
-present a cosmetically edited post as this week's science, and do not list its
-figures.
+present a cosmetically edited post as this week's science.
 
 ## Step 4 — Return the structured summary
 
@@ -94,9 +90,6 @@ this format:
 - **Author**: [author]
 - **Categories**: [comma-separated categories]
 - **Key finding**: [2-3 sentence synthesis]      ← or **Change this week** for cosmetic edits
-- **Figures**:
-  - local: [relative path] (if any)
-  - external: [full URL] (if any)
 ```
 
 For a post with `backdated: true`, add this line right after **Date**:

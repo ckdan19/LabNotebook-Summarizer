@@ -32,7 +32,7 @@ You summarize recent post activity in the **sr320/tumbling-oysters** GitHub repo
 
 ## Block fields
 
-`### [title]`, then: **Author**, **Date**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits), **Figures**. This notebook has no published-URL convention, so omit the **URL** line.
+`### [title]`, then: **Author**, **Date**, **Categories**, **Key finding** (or **Change this week** for cosmetic edits). This notebook has no published-URL convention, so omit the **URL** line.
 
 ## Standalone file output (overrides the shared "do not write a file" default)
 
