@@ -54,18 +54,21 @@ def parse_date(date_str: str):
     return parsed
 
 
-# Posts this repo's own automation publishes to the site. They summarize the
-# lab's notebooks, so feeding them back into a digest only echoes earlier output.
-AUTOMATED_TITLE_PREFIXES = ("daily literature connections", "full lab digest")
-AUTOMATED_CATEGORIES = {"auto-literature-connections"}
+# Posts this repo's own automation publishes to the site: Daily Literature
+# Connections, the Full Lab Digest, and the TWIF podcast ("TWIF S01E03 - ...",
+# category "podcast"). They summarize the lab's notebooks, so feeding them back
+# into a digest only echoes earlier output. Matched case-insensitively.
+AUTOMATED_TITLE_PREFIXES = ("daily literature connections", "full lab digest", "twif ")
+AUTOMATED_CATEGORIES = {"auto-literature-connections", "podcast"}
 
 
 def is_automated(post: dict) -> bool:
-    """True for a Daily Literature Connections or Full Lab Digest post."""
+    """True for a Daily Literature Connections, Full Lab Digest, or TWIF post."""
     title = (post.get("title") or "").strip().lower()
     if title.startswith(AUTOMATED_TITLE_PREFIXES):
         return True
-    return bool(AUTOMATED_CATEGORIES & set(post.get("categories") or []))
+    categories = {(c or "").strip().lower() for c in post.get("categories") or []}
+    return bool(AUTOMATED_CATEGORIES & categories)
 
 
 def fetch_page(site: str, per_page: int, page: int, timeout: int) -> dict:
@@ -131,7 +134,7 @@ def main():
         "--exclude-automated",
         action="store_true",
         help="drop posts this repo's own automation published (Daily Literature "
-        "Connections, Full Lab Digest). Off by default: the workflows' duplicate "
+        "Connections, Full Lab Digest, TWIF podcast). Off by default: the workflows' duplicate "
         "checks need to see exactly those posts.",
     )
     args = parser.parse_args()
