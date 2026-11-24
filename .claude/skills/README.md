@@ -1,6 +1,6 @@
 # Claude Code Skills
 
-This directory holds the nine skills that do the actual work in LabNotebook-Summarizer.
+This directory holds the ten skills that do the actual work in LabNotebook-Summarizer.
 Each skill is a single `SKILL.md` file in its own directory; the directory name is the
 skill's name. A skill is a prompt-level procedure — Claude reads the `SKILL.md` and
 follows it — so a skill is edited like documentation, not like code.
@@ -18,7 +18,7 @@ Related directories:
   output contract the four GitHub agents share.
 - [`../../scripts/`](../../scripts/) — the fetch, archive, publish, and upload scripts.
 
-## The nine skills
+## The ten skills
 
 | Skill | Triggered by | Produces |
 |---|---|---|
@@ -31,6 +31,7 @@ Related directories:
 | [`wordpress-publisher`](wordpress-publisher/SKILL.md) | "publish the digest to WordPress" | A WordPress **draft** |
 | [`digest-audio`](digest-audio/SKILL.md) | "narrate the latest digest" | A local WAV of a digest |
 | [`digest-audio-publish`](digest-audio-publish/SKILL.md) | "publish audio for the latest digest" | A new live WordPress post linking the audio |
+| [`twif-podcast`](twif-podcast/SKILL.md) | "make this week's TWIF episode" | A live `podcast`-category post with an MP3 episode |
 
 ## What each one does
 

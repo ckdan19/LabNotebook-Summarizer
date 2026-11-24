@@ -1,0 +1,126 @@
+name: twif-podcast
+
+# This Week in FTR (TWIF): every Wednesday, turn Monday's weekly full lab digest into a
+# two-host podcast episode and publish it to genefish.wordpress.com in the "podcast"
+# category, titled "TWIF S01EXX - <title>".
+#
+# Unlike the digest workflows, no Claude Code agent runs here. The episode script comes
+# from one Claude API call made by podcast/script.py (structured JSON output, no tools),
+# so the job is deterministic Python end to end: script -> Kokoro audio -> MP3 ->
+# upload_media.py -> publish_digest.py -> commit podcast/episodes.json.
+on:
+  schedule:
+    # 15:00 UTC Wednesdays = 08:00 America/Los_Angeles during PDT, 07:00 during PST.
+    # The weekly digest runs Monday at the same hour, so its digest is two days old.
+    - cron: "0 15 * * 3"
+  workflow_dispatch:
+    inputs:
+      status:
+        description: "WordPress post status"
+        type: choice
+        options: [publish, draft]
+        default: publish
+      digest:
+        description: "Digest path to use (blank = newest weekly digest)"
+        required: false
+        default: ""
+
+# Writes podcast/episodes.json back so episode numbers keep counting up.
+permissions:
+  contents: write
+
+# Two overlapping runs would both claim the same episode number.
+concurrency:
+  group: twif-podcast
+  cancel-in-progress: false
+
+jobs:
+  episode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # espeak-ng: Kokoro's English phonemizer fallback. ffmpeg: WAV -> MP3.
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg
+
+      - name: Verify secrets are configured
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          missing=0
+          [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::ANTHROPIC_API_KEY is not set."; missing=1; }
+          [ -n "$WORDPRESS_TOKEN" ] || { echo "::error::WORDPRESS_TOKEN is not set."; missing=1; }
+          exit $missing
+
+      - name: Install WordPress token
+        env:
+          WORDPRESS_TOKEN: ${{ secrets.WORDPRESS_TOKEN }}
+        run: |
+          install -d -m 700 "$HOME/.config/LabNotebook-Summarizer"
+          umask 077
+          printf '%s' "$WORDPRESS_TOKEN" > "$HOME/.config/LabNotebook-Summarizer/wp_token"
+          chmod 600 "$HOME/.config/LabNotebook-Summarizer/wp_token"
+
+      # Kokoro pulls hexgrad/Kokoro-82M from the Hugging Face hub on first use.
+      - name: Cache Kokoro model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: kokoro-weights-${{ hashFiles('text_to_speech/requirements-kokoro.txt') }}
+          restore-keys: kokoro-weights-
+
+      - name: Create .venv-tts with Kokoro and the podcast dependencies
+        run: |
+          python -m venv .venv-tts
+          .venv-tts/bin/python -m pip install --upgrade pip
+          .venv-tts/bin/python -m pip install \
+            -r text_to_speech/requirements-kokoro.txt \
+            -r podcast/requirements.txt
+
+      - name: Make the episode
+        id: episode
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          STATUS: ${{ inputs.status || 'publish' }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          set -o pipefail
+          args=(run --status "$STATUS")
+          [ -n "$DIGEST" ] && args+=(--digest "$DIGEST")
+          .venv-tts/bin/python -m podcast "${args[@]}" | tee "$RUNNER_TEMP/episode.json"
+          if grep -q '"status": "skipped"' "$RUNNER_TEMP/episode.json"; then
+            echo "::warning::No episode made — see the skip reason above."
+          fi
+
+      - name: Commit episode log
+        run: |
+          git add podcast/episodes.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No new episode recorded."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Record TWIF episode ($(date -u +%Y-%m-%d))"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Keep the script and post for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twif-episode
+          path: |
+            podcast/output/*.json
+            podcast/output/*.md
+            ${{ runner.temp }}/episode.json
+          if-no-files-found: warn

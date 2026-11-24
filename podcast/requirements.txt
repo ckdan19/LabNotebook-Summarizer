@@ -1,0 +1,6 @@
+# Install into the same Python 3.10-3.13 environment as Kokoro (.venv-tts):
+#   pip install -r text_to_speech/requirements-kokoro.txt -r podcast/requirements.txt
+# ffmpeg must also be on PATH for MP3 encoding.
+anthropic>=2.13,<3
+# Used by scripts/publish_digest.py to convert the post Markdown to HTML.
+markdown>=3.5
