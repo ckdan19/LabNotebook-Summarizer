@@ -12,10 +12,12 @@ You summarize recent post activity on the [genefish WordPress lab notebook](http
 Run the helper script from the repository root (the working directory Claude Code starts in):
 
 ```bash
-python3 scripts/fetch_lab_posts.py
+python3 scripts/fetch_lab_posts.py --exclude-automated
 ```
 
-The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts published in the last 7 days, strips HTML, and outputs JSON with three keys: `week_start` (ISO date string), `posts` (array of objects with `author`, `date`, `title`, `url`, `content`), and `warnings` (array of strings).
+Pass `--days N` as well if a window other than 7 days is requested. Always keep `--exclude-automated`: it drops the posts this repo's own automation publishes to the site ("Daily Literature Connections" and "Full Lab Digest" posts), which are summaries of the lab's notebooks rather than lab work. Do not report those posts even if one slips through.
+
+The script pages through the WordPress.com REST API for `genefish.wordpress.com`, keeps posts published in the window (counted in US Pacific calendar days, ending today), strips HTML, and outputs JSON with keys: `week_start` and `today` (ISO date strings — use these in the header), `excluded_automated` (how many automated posts were dropped), `posts` (array of objects with `author`, `date`, `title`, `url`, `content`), and `warnings` (array of strings).
 
 ## Step 2 — Handle empty results and warnings
 

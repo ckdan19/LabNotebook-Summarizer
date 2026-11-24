@@ -35,6 +35,12 @@ The script prints JSON with `repo`, `week_start`, `today`, `commits_scanned`,
   post whose diff is ≤6 lines: a link fix, typo, or formatting change)
 - `patch` — the diff, present only on `cosmetic` posts
 - `status`, `additions`, `deletions`, `blob_url`
+- `front_matter_date` — the post's own `date:` normalized to `YYYY-MM-DD`, or null
+- `backdated` — `true` when the post was first added in this window but its
+  front-matter date is earlier than `week_start`
+
+`week_start` and `today` are the window in US Pacific calendar days. Use exactly
+these two values in your header — do not compute dates yourself.
 
 Some notebooks add extra per-post fields — see your agent file (e.g.
 `content_truncated` on the Quarto notebooks, `commit_dates` on Grace's).
@@ -92,6 +98,10 @@ this format:
   - local: [relative path] (if any)
   - external: [full URL] (if any)
 ```
+
+For a post with `backdated: true`, add this line right after **Date**:
+`- **⚠ Backdated**: first committed this window; dated [front_matter_date] in the post`.
+Keep reporting it — it is new to readers — but its date is outside the window.
 
 Include exactly the block fields your agent file specifies — omit any line that
 doesn't apply to this notebook (e.g. no `Author` for a single-author site, no `URL`

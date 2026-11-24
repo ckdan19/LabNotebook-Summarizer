@@ -225,7 +225,7 @@ Nothing here fails loudly; it just leaves instructions that quietly contradict r
 
 | File | What to change |
 |---|---|
-| [`full-lab-digest/SKILL.md`](../.claude/skills/full-lab-digest/SKILL.md) | Add the agent to the step-2 launch list; add a `## <Source label>` section (with its paste placeholder) to the step-6 template; add the source to the step-9 Data & Figures group order; update every hardcoded count (see below) |
+| [`full-lab-digest/SKILL.md`](../.claude/skills/full-lab-digest/SKILL.md) | Add the agent to the step-2 launch list; add a `## <Source label>` section (with its paste placeholder) to the step-6 template; update every hardcoded count (see below) |
 | [`lab-archive/SKILL.md`](../.claude/skills/lab-archive/SKILL.md) | Add the key to the `source` column's list of allowed values, and to the source-label map at the bottom |
 | [`digest-index/SKILL.md`](../.claude/skills/digest-index/SKILL.md) | Add the `<source-key>-` filename-prefix → type rule, and the short label used in the "sources with activity" column |
 | [`README.md`](../README.md) | Add a row to the Data Sources table; update the `--notebook` choices in the `fetch_github_notebook.py` example and its Options line; update the Repository Structure comments ("one subagent per notebook source", "shared by the four GitHub agents") |
@@ -267,7 +267,7 @@ placeholder), and the `> [N] of [total] sources had activity` line counts the ne
 - [ ] `GITHUB_SOURCES` + `DEFAULT_AUTHORS` in `scripts/build_archive.py`
 - [ ] `.claude/agents/<source-key>-notebook-agent.md`
 - [ ] agent roster line in `.claude/shared/notebook-digest-format.md`
-- [ ] `full-lab-digest/SKILL.md` — agent list, digest template section, Data & Figures order, counts
+- [ ] `full-lab-digest/SKILL.md` — agent list, digest template section, counts
 - [ ] `lab-archive/SKILL.md` — source list, source-label map
 - [ ] `digest-index/SKILL.md` — filename prefix, short label
 - [ ] `README.md` — Data Sources table, script options, structure comments

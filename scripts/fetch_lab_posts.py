@@ -10,6 +10,8 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from notebook_parsing import digest_window
+
 DEFAULT_SITE = "genefish.wordpress.com"
 DEFAULT_DAYS = 7
 DEFAULT_PER_PAGE = 100  # largest page size the v1.1 API accepts
@@ -50,6 +52,20 @@ def parse_date(date_str: str):
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed
+
+
+# Posts this repo's own automation publishes to the site. They summarize the
+# lab's notebooks, so feeding them back into a digest only echoes earlier output.
+AUTOMATED_TITLE_PREFIXES = ("daily literature connections", "full lab digest")
+AUTOMATED_CATEGORIES = {"auto-literature-connections"}
+
+
+def is_automated(post: dict) -> bool:
+    """True for a Daily Literature Connections or Full Lab Digest post."""
+    title = (post.get("title") or "").strip().lower()
+    if title.startswith(AUTOMATED_TITLE_PREFIXES):
+        return True
+    return bool(AUTOMATED_CATEGORIES & set(post.get("categories") or []))
 
 
 def fetch_page(site: str, per_page: int, page: int, timeout: int) -> dict:
@@ -110,9 +126,17 @@ def main():
     parser.add_argument("--per-page", type=int, default=DEFAULT_PER_PAGE, help="posts per API page")
     parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES, help="page cap")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="per-request seconds")
+
+    parser.add_argument(
+        "--exclude-automated",
+        action="store_true",
+        help="drop posts this repo's own automation published (Daily Literature "
+        "Connections, Full Lab Digest). Off by default: the workflows' duplicate "
+        "checks need to see exactly those posts.",
+    )
     args = parser.parse_args()
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=args.days)
+    week_start, today, cutoff = digest_window(args.days)
 
     try:
         posts, warnings = collect_posts(
@@ -123,16 +147,13 @@ def main():
         print(json.dumps({"error": str(e)}))
         sys.exit(1)
 
-    print(
-        json.dumps(
-            {
-                "week_start": cutoff.strftime("%Y-%m-%d"),
-                "posts": posts,
-                "warnings": warnings,
-            },
-            indent=2,
-        )
-    )
+    out = {"week_start": week_start.isoformat(), "today": today.isoformat()}
+    if args.exclude_automated:
+        kept = [p for p in posts if not is_automated(p)]
+        out["excluded_automated"] = len(posts) - len(kept)
+        posts = kept
+    out.update(posts=posts, warnings=warnings)
+    print(json.dumps(out, indent=2))
 
 
 if __name__ == "__main__":

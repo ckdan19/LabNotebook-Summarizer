@@ -21,7 +21,7 @@ from urllib.request import Request, urlopen
 # Shared post-parsing logic, also used by the archive builder. Re-exported here
 # so callers and tests can keep referencing fetch_github_notebook.build_post /
 # .clip.
-from notebook_parsing import build_post, clip
+from notebook_parsing import build_post, clip, digest_window, is_backdated, parse_front_matter
 
 DEFAULT_DAYS = 7
 DEFAULT_TIMEOUT = 20
@@ -205,16 +205,15 @@ def main():
 
     config = NOTEBOOKS[args.notebook]
     repo = config["repo"]
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=args.days)
+    week_start, today, cutoff = digest_window(args.days)
     since = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
     want_dates = args.file_dates or config.get("file_dates", False)
 
     result = {
         "notebook": args.notebook,
         "repo": repo,
-        "week_start": cutoff.strftime("%Y-%m-%d"),
-        "today": now.strftime("%Y-%m-%d"),
+        "week_start": week_start.isoformat(),
+        "today": today.isoformat(),
     }
     warnings = []
 
@@ -266,6 +265,10 @@ def main():
                         f"(post exceeds the {limit}-char cap); head and tail are intact."
                     )
             post["content"] = text
+            # Front matter sits at the head of the post, which clip() always keeps.
+            fm_date = parse_front_matter(text).get("date")
+            post["front_matter_date"] = fm_date
+            post["backdated"] = is_backdated(post["status"], fm_date, week_start)
 
         def fetch_dates(post):
             post["commit_dates"] = file_commit_dates(repo, post["path"], since, args.timeout)
