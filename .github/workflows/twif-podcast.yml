@@ -2,7 +2,7 @@ name: twif-podcast
 
 # This Week in FTR (TWIF): every Wednesday, turn Monday's weekly full lab digest into a
 # two-host podcast episode and publish it to genefish.wordpress.com in the "podcast"
-# category, titled "TWIF S01EXX - <title>".
+# category, titled "TWIF S10EXX - <title>".
 #
 # Unlike the digest workflows, no Claude Code agent runs here. The episode script comes
 # from one Claude API call made by podcast/script.py (structured JSON output, no tools),

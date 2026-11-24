@@ -136,6 +136,16 @@ class EpisodeTests(unittest.TestCase):
         self.assertEqual(episodes.next_episode_number({"season": 1, "episodes": []}), 1)
         self.assertEqual(episodes.post_title(1, 3, "Hot Oysters"), "TWIF S01E03 - Hot Oysters")
 
+    def test_show_starts_at_season_ten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = episodes.load_state(Path(tmp) / "missing.json")
+        self.assertEqual(state["season"], 10)
+        # Episodes from another season do not advance the current season's count.
+        state["episodes"] = [{"season": 1, "episode": 1}]
+        self.assertEqual(episodes.next_episode_number(state), 1)
+        self.assertEqual(episodes.post_title(10, 1, "Hot Oysters"), "TWIF S10E01 - Hot Oysters")
+        self.assertEqual(episodes.load_state()["season"], 10)
+
     def test_latest_weekly_digest_uses_filename_date(self):
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
@@ -254,22 +264,22 @@ class CliTests(unittest.TestCase):
 
     def test_next_reports_episode_one(self):
         report = self.run_cli("next", "--digest", str(self.digest))
-        self.assertEqual(report["label"], "S01E01")
+        self.assertEqual(report["label"], "S10E01")
         self.assertNotIn("skip", report)
 
     def test_dry_run_writes_script_only(self):
         with patch.object(cli, "generate_script", return_value=validate_script(make_script())):
             report = self.run_cli("run", "--dry-run", "--digest", str(self.digest))
-        self.assertEqual(report["title"], "TWIF S01E01 - Oysters Take the Heat")
-        self.assertTrue((self.output / "TWIF-S01E01.json").exists())
+        self.assertEqual(report["title"], "TWIF S10E01 - Oysters Take the Heat")
+        self.assertTrue((self.output / "TWIF-S10E01.json").exists())
         self.assertFalse(self.state.exists())
 
     def test_covered_digest_is_skipped(self):
-        episodes.save_state({"season": 1, "episodes": [
-            {"season": 1, "episode": 1, "digest": self.digest.name}]})
+        episodes.save_state({"season": 10, "episodes": [
+            {"season": 10, "episode": 1, "digest": self.digest.name}]})
         report = self.run_cli("run", "--digest", str(self.digest))
         self.assertEqual(report["status"], "skipped")
-        self.assertIn("S01E01", report["skip"])
+        self.assertIn("S10E01", report["skip"])
 
     def test_stale_digest_is_skipped_unless_allowed(self):
         old = self.digest.with_name("full-lab-digest-{}-7d.md".format(
@@ -306,7 +316,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(report["post_id"], 42)
         self.assertEqual(report["minutes"], 12.0)
-        self.assertEqual(encode.call_args[0][2]["title"], "TWIF S01E01 - Oysters Take the Heat")
+        self.assertEqual(encode.call_args[0][2]["title"], "TWIF S10E01 - Oysters Take the Heat")
         publish = commands[1]
         self.assertIn("--category", publish)
         self.assertEqual(publish[publish.index("--category") + 1], "podcast")
@@ -316,7 +326,7 @@ class CliTests(unittest.TestCase):
         recorded = json.loads(self.state.read_text())["episodes"]
         self.assertEqual(recorded[0]["episode"], 1)
         self.assertEqual(recorded[0]["digest"], self.digest.name)
-        self.assertEqual(self.run_cli("next", "--digest", str(self.digest))["skip"][-7:], "S01E01.")
+        self.assertEqual(self.run_cli("next", "--digest", str(self.digest))["skip"][-7:], "S10E01.")
 
 
 if __name__ == "__main__":

@@ -1,17 +1,4 @@
 {
-  "season": 1,
-  "episodes": [
-    {
-      "season": 1,
-      "episode": 1,
-      "title": "TWIF S01E01 - The Standard Curve Was Off by Ten",
-      "digest": "full-lab-digest-2026-11-24-7d.md",
-      "published": "2026-11-24",
-      "status": "draft",
-      "post_url": "https://genefish.wordpress.com/?p=10181",
-      "post_id": 10181,
-      "audio_url": "https://genefish.wordpress.com/wp-content/uploads/2026/11/twif-s01e01.mp3",
-      "minutes": 16.9
-    }
-  ]
+  "season": 10,
+  "episodes": []
 }
