@@ -2,12 +2,14 @@ name: twif-podcast
 
 # This Week in FTR (TWIF): every Wednesday, turn Monday's weekly full lab digest into a
 # two-host podcast episode and publish it to genefish.wordpress.com in the "podcast"
-# category, titled "TWIF S10EXX - <title>".
+# category, titled "TWIF S10EXX - <title>". A Chilean Spanish adaptation of the same
+# episode follows in the "podcast-es" category, titled "TWIF S10EXX (Español) - <título>".
 #
 # Unlike the digest workflows, no Claude Code agent runs here. The episode script comes
-# from one Claude API call made by podcast/script.py (structured JSON output, no tools),
-# so the job is deterministic Python end to end: script -> Kokoro audio -> MP3 ->
-# upload_media.py -> publish_digest.py -> commit podcast/episodes.json.
+# from Claude API calls made by podcast/script.py (structured JSON output, no tools): one
+# writes the English script, a second adapts it into Chilean Spanish. Otherwise the job is
+# deterministic Python: script -> Kokoro audio -> MP3 -> upload_media.py ->
+# publish_digest.py, once per language, then commit podcast/episodes.json.
 on:
   schedule:
     # 15:00 UTC Wednesdays = 08:00 America/Los_Angeles during PDT, 07:00 during PST.
@@ -96,12 +98,22 @@ jobs:
           set -o pipefail
           args=(run --status "$STATUS")
           [ -n "$DIGEST" ] && args+=(--digest "$DIGEST")
-          .venv-tts/bin/python -m podcast "${args[@]}" | tee "$RUNNER_TEMP/episode.json"
+          status=0
+          .venv-tts/bin/python -m podcast "${args[@]}" > "$RUNNER_TEMP/episode.json" || status=$?
+          cat "$RUNNER_TEMP/episode.json"
+          if [ "$status" = 2 ]; then
+            echo "::error::English episode published, but the Spanish edition failed (see \"spanish\" above)."
+          fi
           if grep -q '"status": "skipped"' "$RUNNER_TEMP/episode.json"; then
             echo "::warning::No episode made — see the skip reason above."
           fi
+          exit $status
 
+      # Runs even when the Spanish edition failed (the episode step exits 2), so the
+      # already-published English episode is still recorded and numbering stays right.
+      # Retry the Spanish edition with `python -m podcast spanish`.
       - name: Commit episode log
+        if: always()
         run: |
           git add podcast/episodes.json 2>/dev/null || true
           if git diff --cached --quiet; then

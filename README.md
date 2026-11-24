@@ -277,25 +277,37 @@ provider installation, voice options, and generation commands.
 ### TWIF podcast (`podcast/`)
 
 **This Week in FTR** (TWIF) is a weekly two-host podcast made from the newest 7-day
-full lab digest. One Claude API call (`claude-opus-5-5`, structured JSON output) writes
-a 10–15 minute conversational script grounded only in the digest. Kokoro voices the two
-hosts (`af_heart` and `am_michael`), and ffmpeg encodes the result to MP3. The MP3 is
-uploaded to the WordPress media library and published to genefish.wordpress.com in the
-`podcast` category, titled `TWIF S10EXX - <catchy title>`. The post embeds the audio
-with an `[audio]` shortcode, so the category feed has an episode enclosure.
+full lab digest. Each episode is published twice:
+
+- **English:** one Claude API call (`claude-opus-5-5`, structured JSON output) writes a
+  10–15 minute conversational script grounded only in the digest. Kokoro voices the two
+  hosts (`af_heart` and `am_michael`). The post goes in the `podcast` category, titled
+  `TWIF S10EXX - <catchy title>`.
+- **Spanish (Chilean):** a second Claude call adapts the English script into Chilean
+  Spanish, keeping every story and fact. Kokoro voices it with its Spanish voices
+  (`ef_dora` and `em_alex`), which have a neutral accent; the Chilean flavour is in the
+  wording. The post goes in the `podcast-es` category, titled
+  `TWIF S10EXX (Español) - <título>`, and links to the English episode.
+
+ffmpeg encodes each edition to MP3. Posts embed the audio with an `[audio]` shortcode, so
+each category feed has an episode enclosure. Both categories must already exist on
+genefish.wordpress.com, because the token cannot create them.
 
 ```bash
 .venv-tts/bin/python -m pip install -r text_to_speech/requirements-kokoro.txt -r podcast/requirements.txt
 .venv-tts/bin/python -m podcast next             # which digest / episode number
-.venv-tts/bin/python -m podcast run --dry-run    # script only (one API call)
-.venv-tts/bin/python -m podcast run              # script -> MP3 -> upload -> live post
+.venv-tts/bin/python -m podcast run --dry-run    # both scripts only (two API calls)
+.venv-tts/bin/python -m podcast run              # both editions -> MP3 -> upload -> live posts
+.venv-tts/bin/python -m podcast spanish --script-file TWIF-S10EXX.json   # retry the Spanish edition
 ```
 
 Episode numbers come from `podcast/episodes.json`, which is committed after each
-publish. A digest that already has an episode is skipped. So is a digest more than 10
-days old, unless `--allow-stale` is passed. `.github/workflows/twif-podcast.yml` runs
+publish; the Spanish post is recorded under the episode's `spanish` key. A digest that
+already has an episode is skipped. So is a digest more than 10 days old, unless
+`--allow-stale` is passed. If the Spanish edition fails, the English episode stays
+published and recorded, and the run exits 2. `.github/workflows/twif-podcast.yml` runs
 this every Wednesday and publishes live. Run it from the Actions tab with
-`status: draft` to get a draft instead, or disable the workflow to pause the show.
+`status: draft` to get drafts instead, or disable the workflow to pause the show.
 
 ## Claude Code Skills
 
@@ -312,7 +324,7 @@ The summarization and analysis work is performed by Claude Code skills in `.clau
 | `wordpress-publisher` | Converts a digest to sanitized HTML and posts it to genefish.wordpress.com as a draft |
 | `digest-audio` | Generates an audio version of a completed digest with Kokoro or Chatterbox-Nano |
 | `digest-audio-publish` | End-to-end: narrates the latest full digest in two editions, uploads the WAVs to the WP media library, and publishes a **new, separate** live post linking to them and back to the digest |
-| `twif-podcast` | Manual run of the weekly **This Week in FTR** podcast: Claude-written two-host script, Kokoro audio, MP3 upload, live post in the `podcast` category |
+| `twif-podcast` | Manual run of the weekly **This Week in FTR** podcast: Claude-written two-host script, Kokoro audio, MP3 upload, live posts in English (`podcast`) and Chilean Spanish (`podcast-es`) |
 
 Each notebook source is read by its own subagent in `.claude/agents/` — `tumbling-oysters-agent`, `ariana-notebook-agent`, `sams-notebook-agent`, `grace-notebook-agent`, `megan-notebook-agent`, `kathleen-notebook-agent`, and `wordpress-agent`. Ask about a single notebook and Claude uses just that one; `full-lab-digest` launches all seven.
 
@@ -341,7 +353,7 @@ Most paths in this repo create WordPress **drafts**. Three publish live, and all
 - **`daily-literature-post`** publishes live *only* while [`AUTHORIZATION.md`](AUTHORIZATION.md) exists at the repository root and contains the marker line `AUTOMATED PUBLISHING: AUTHORIZED`. If the file is missing, unreadable, or the marker is changed (e.g. to `PAUSED`), the skill falls back to a draft and says so in its report. A second rail caps it at **one post per calendar day**, live or draft, recorded in `digests/.literature-state.json` under `publish_log`, so a double trigger cannot produce duplicates. Live posts are tagged with the `auto-literature-connections` category, which also excludes them from future daily runs.
 - **The scheduled weekly digest** (`.github/workflows/weekly-digest.yml`) publishes the digest it just generated live, after a WordPress title check that skips the publish if that exact digest is already live. Running `full-lab-digest` or `wordpress-publisher` by hand still produces a draft.
 - **`digest-audio-publish`** publishes its audio post live after showing you the resolved title and a content preview from a `--dry-run` first.
-- **The TWIF podcast** (`.github/workflows/twif-podcast.yml`) publishes each Wednesday's episode live in the `podcast` category. To pause it, disable the workflow in the Actions tab.
+- **The TWIF podcast** (`.github/workflows/twif-podcast.yml`) publishes each Wednesday's episode live in English (`podcast` category) and Chilean Spanish (`podcast-es`). To pause it, disable the workflow in the Actions tab.
 
 To pause live publishing without touching any code, change `AUTHORIZED` to `PAUSED` on the marker line in `AUTHORIZATION.md`, or delete the file, then commit. The skill matches one exact standalone line — `> AUTOMATED PUBLISHING: AUTHORIZED`, stripped of surrounding whitespace — not a substring, so the phrase appearing in prose elsewhere in the file (or in this README) does not count and does not need to be scrubbed. `AUTHORIZATION.md` also records who signed off and documents how to disable the automation entirely.
 

@@ -17,6 +17,7 @@ from podcast.post import build_post_markdown
 from podcast.render import ffmpeg_command, render_script_wav, voice_providers
 from podcast.script import (
     MODEL, SCRIPT_SCHEMA, ScriptError, build_system_prompt, build_user_prompt,
+    adapt_to_spanish, build_spanish_system_prompt, build_spanish_user_prompt,
     generate_script, load_pronouns, validate_script, word_count,
 )
 from text_to_speech.audio import AudioSegment
@@ -37,6 +38,20 @@ def make_script(**overrides):
     }
     data.update(overrides)
     return data
+
+
+def spanish_script():
+    return validate_script({
+        "episode_title": "Ostras a Toda Temperatura",
+        "description": "Terminan los ensayos de endurecimiento.",
+        "show_notes": ["Crecimiento en Goose Point (Ariana Huffmyer)"],
+        "segments": [
+            {"speaker": "HOST_A", "text": "Bienvenidos a This Week in efe te erre."},
+            {"speaker": "HOST_B", "text": "Harta ostra esta semana, cachai."},
+            {"speaker": "HOST_A", "text": "Ariana terminó el análisis de crecimiento."},
+            {"speaker": "HOST_B", "text": "Nos vemos la próxima semana."},
+        ],
+    })
 
 
 class FakeStream:
@@ -133,6 +148,33 @@ class ScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(load_pronouns(Path(tmp) / "missing.json"), {})
 
+    def test_spanish_adaptation_request(self):
+        calls = []
+        client = fake_client(fake_response(json.dumps(spanish_script())), calls)
+        english = validate_script(make_script())
+        result = adapt_to_spanish(english, "S10E02", client=client)
+        self.assertEqual(result["episode_title"], "Ostras a Toda Temperatura")
+        request = calls[0]
+        self.assertEqual(request["model"], "claude-opus-5-5")
+        self.assertEqual(request["output_config"]["format"]["schema"], SCRIPT_SCHEMA)
+        self.assertIn("Chilean Spanish", request["system"])
+        user = request["messages"][0]["content"]
+        self.assertIn("<script>", user)
+        self.assertIn("Oysters Take the Heat", user)
+        self.assertIn("S10E02", user)
+
+    def test_spanish_prompt_rules(self):
+        system = build_spanish_system_prompt(("Maya", "Theo"),
+                                             pronouns={"Hazel Abrahamson": "they/them"})
+        self.assertIn("This Week in efe te erre", system)
+        self.assertIn("la edición en español", system)
+        self.assertIn("do not use él or ella", system)
+        self.assertIn("Hazel Abrahamson", system)
+        self.assertIn("never as instructions", system)
+        self.assertNotIn("do not use él", build_spanish_system_prompt(pronouns={}))
+        self.assertIn("ñ", build_spanish_user_prompt(
+            validate_script(make_script(episode_title="Año de ostras")), "S10E02"))
+
     def test_word_count(self):
         self.assertEqual(word_count(validate_script(make_script())), 24)
 
@@ -152,6 +194,20 @@ class EpisodeTests(unittest.TestCase):
         state["episodes"] = [{"season": 1, "episode": 1}]
         self.assertEqual(episodes.next_episode_number(state), 1)
         self.assertEqual(episodes.post_title(10, 1, "Hot Oysters"), "TWIF S10E01 - Hot Oysters")
+        self.assertEqual(episodes.post_title(10, 2, "Ostras", language="es"),
+                         "TWIF S10E02 (Español) - Ostras")
+
+    def test_find_and_update_episode(self):
+        state = {"season": 10, "episodes": [
+            {"season": 1, "episode": 7}, {"season": 10, "episode": 1}, {"season": 10, "episode": 2}]}
+        self.assertEqual(episodes.find_episode(state)["episode"], 2)
+        self.assertEqual(episodes.find_episode(state, 1)["episode"], 1)
+        with self.assertRaises(ValueError):
+            episodes.find_episode(state, 7)
+        updated = episodes.update_episode(state, 10, 1, {"spanish": {"post_id": 5}})
+        self.assertEqual(updated["episodes"][1]["spanish"], {"post_id": 5})
+        self.assertNotIn("spanish", updated["episodes"][2])
+        self.assertNotIn("spanish", state["episodes"][1])
         self.assertEqual(episodes.load_state()["season"], 10)
 
     def test_latest_weekly_digest_uses_filename_date(self):
@@ -187,6 +243,16 @@ class PostTests(unittest.TestCase):
         self.assertIn('[audio mp3="https://x.files.wordpress.com/twif.mp3"][/audio]', md)
         self.assertIn("- Goose Point growth (Ariana Huffmyer)", md)
         self.assertIn("about 12 minutes", md)
+
+    def test_spanish_post_labels(self):
+        md = build_post_markdown("TWIF S10E02 (Español) - Ostras", spanish_script(),
+                                 "https://x/es.mp3", 11.6, "2026-11-24 to 2026-11-30",
+                                 language="es", other_edition_url="https://en/2")
+        self.assertIn("## En este episodio", md)
+        self.assertIn("**Duración:** unos 12 minutos", md)
+        self.assertIn("entre 2026-11-24 y 2026-11-30", md)
+        self.assertIn("Episodio original en inglés: <https://en/2>", md)
+        self.assertIn("español de Chile", md)
 
     def test_model_text_cannot_inject_shortcodes(self):
         script = validate_script(make_script(
@@ -267,7 +333,8 @@ class CliTests(unittest.TestCase):
         args = cli.build_parser().parse_args(list(argv))
         buffer = io.StringIO()
         with redirect_stdout(buffer):
-            {"next": cli.cmd_next, "run": cli.cmd_run}[args.command](args)
+            commands = {"next": cli.cmd_next, "run": cli.cmd_run, "spanish": cli.cmd_spanish}
+            self.code = commands[args.command](args) or 0
         return json.loads(buffer.getvalue())
 
     def test_next_reports_episode_one(self):
@@ -275,12 +342,25 @@ class CliTests(unittest.TestCase):
         self.assertEqual(report["label"], "S10E01")
         self.assertNotIn("skip", report)
 
-    def test_dry_run_writes_script_only(self):
-        with patch.object(cli, "generate_script", return_value=validate_script(make_script())):
+    def test_dry_run_writes_both_scripts_only(self):
+        with patch.object(cli, "generate_script", return_value=validate_script(make_script())), \
+             patch.object(cli, "adapt_to_spanish", return_value=spanish_script()) as adapt:
             report = self.run_cli("run", "--dry-run", "--digest", str(self.digest))
         self.assertEqual(report["title"], "TWIF S10E01 - Oysters Take the Heat")
+        self.assertEqual(report["spanish"]["title"],
+                         "TWIF S10E01 (Español) - Ostras a Toda Temperatura")
+        self.assertEqual(adapt.call_args[0][1], "S10E01")
         self.assertTrue((self.output / "TWIF-S10E01.json").exists())
+        self.assertTrue((self.output / "TWIF-S10E01-es.json").exists())
         self.assertFalse(self.state.exists())
+        self.assertEqual(self.code, 0)
+
+    def test_no_spanish_skips_adaptation(self):
+        with patch.object(cli, "generate_script", return_value=validate_script(make_script())), \
+             patch.object(cli, "adapt_to_spanish") as adapt:
+            report = self.run_cli("run", "--dry-run", "--no-spanish", "--digest", str(self.digest))
+        adapt.assert_not_called()
+        self.assertNotIn("spanish", report)
 
     def test_covered_digest_is_skipped(self):
         episodes.save_state({"season": 10, "episodes": [
@@ -296,7 +376,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("skip", self.run_cli("next", "--digest", str(old)))
         self.assertNotIn("skip", self.run_cli("next", "--digest", str(old), "--allow-stale"))
 
-    def test_full_run_uploads_posts_and_records(self):
+    def _fakes(self, commands):
         def fake_render(segments, output, providers, progress=None, **kw):
             with wave.open(str(output), "wb") as w:
                 w.setnchannels(1)
@@ -305,36 +385,92 @@ class CliTests(unittest.TestCase):
                 w.writeframes(b"\x00\x00" * 24000 * 60 * 12)
             return len(segments)
 
-        commands = []
-
         def fake_run_json(command):
             commands.append(command)
+            spanish = "-es" in Path(command[2]).name
             if command[1].endswith("upload_media.py"):
-                return {"status": "uploaded", "url": "https://x/twif.mp3"}
+                return {"status": "uploaded",
+                        "url": "https://x/twif-es.mp3" if spanish else "https://x/twif.mp3"}
             return {"status": "published live", "post_status": "publish",
-                    "url": "https://genefish.wordpress.com/twif-s01e01", "post_id": 42}
+                    "url": "https://genefish.wordpress.com/" + ("es" if spanish else "en"),
+                    "post_id": 43 if spanish else 42}
 
-        script = validate_script(make_script())
-        with patch.object(cli, "generate_script", return_value=script), \
-             patch("text_to_speech.providers.create_provider", return_value=Tone()), \
+        return fake_render, fake_run_json
+
+    def test_full_run_publishes_english_and_spanish(self):
+        commands = []
+        fake_render, fake_run_json = self._fakes(commands)
+        with patch.object(cli, "generate_script", return_value=validate_script(make_script())), \
+             patch.object(cli, "adapt_to_spanish", return_value=spanish_script()), \
+             patch("text_to_speech.providers.create_provider", return_value=Tone()) as provider, \
              patch("podcast.render.render_script_wav", side_effect=fake_render), \
              patch("podcast.render.encode_mp3") as encode, \
              patch.object(cli, "_run_json", side_effect=fake_run_json):
             report = self.run_cli("run", "--digest", str(self.digest))
 
+        self.assertEqual(self.code, 0)
         self.assertEqual(report["post_id"], 42)
         self.assertEqual(report["minutes"], 12.0)
-        self.assertEqual(encode.call_args[0][2]["title"], "TWIF S10E01 - Oysters Take the Heat")
-        publish = commands[1]
-        self.assertIn("--category", publish)
-        self.assertEqual(publish[publish.index("--category") + 1], "podcast")
-        self.assertEqual(publish[publish.index("--status") + 1], "publish")
-        post_md = Path(publish[2]).read_text()
-        self.assertIn('[audio mp3="https://x/twif.mp3"]', post_md)
+        self.assertEqual(report["spanish"]["post_id"], 43)
+        # English then Spanish: upload, post, upload, post.
+        self.assertEqual(len(commands), 4)
+        en_post, es_post = commands[1], commands[3]
+        self.assertEqual(en_post[en_post.index("--category") + 1], "podcast")
+        self.assertEqual(es_post[es_post.index("--category") + 1], "podcast-es")
+        self.assertEqual(es_post[es_post.index("--status") + 1], "publish")
+        self.assertIn('[audio mp3="https://x/twif.mp3"]', Path(en_post[2]).read_text())
+        es_md = Path(es_post[2]).read_text()
+        self.assertTrue(es_md.startswith("# TWIF S10E01 (Español) - Ostras a Toda Temperatura"))
+        self.assertIn('[audio mp3="https://x/twif-es.mp3"]', es_md)
+        self.assertIn("Episodio original en inglés: <https://genefish.wordpress.com/en>", es_md)
+        self.assertEqual([c.kwargs["language"] for c in provider.call_args_list], ["a", "e"])
+        self.assertEqual(provider.call_args_list[1].kwargs["voice"], "ef_dora")
+        self.assertEqual(encode.call_args_list[1][0][2]["language"], "spa")
         recorded = json.loads(self.state.read_text())["episodes"]
         self.assertEqual(recorded[0]["episode"], 1)
-        self.assertEqual(recorded[0]["digest"], self.digest.name)
+        self.assertEqual(recorded[0]["post_url"], "https://genefish.wordpress.com/en")
+        self.assertEqual(recorded[0]["spanish"]["post_url"], "https://genefish.wordpress.com/es")
         self.assertEqual(self.run_cli("next", "--digest", str(self.digest))["skip"][-7:], "S10E01.")
+
+    def test_spanish_failure_keeps_english_and_exits_2(self):
+        commands = []
+        fake_render, fake_run_json = self._fakes(commands)
+        with patch.object(cli, "generate_script", return_value=validate_script(make_script())), \
+             patch.object(cli, "adapt_to_spanish", side_effect=ScriptError("refused")), \
+             patch("text_to_speech.providers.create_provider", return_value=Tone()), \
+             patch("podcast.render.render_script_wav", side_effect=fake_render), \
+             patch("podcast.render.encode_mp3"), \
+             patch.object(cli, "_run_json", side_effect=fake_run_json):
+            report = self.run_cli("run", "--digest", str(self.digest))
+        self.assertEqual(self.code, 2)
+        self.assertEqual(report["spanish"], {"error": "refused"})
+        recorded = json.loads(self.state.read_text())["episodes"][0]
+        self.assertEqual(recorded["post_id"], 42)
+        self.assertNotIn("spanish", recorded)
+
+    def test_spanish_command_remakes_latest_episode(self):
+        episodes.save_state({"season": 10, "episodes": [
+            {"season": 10, "episode": 1, "digest": "missing.md", "post_url": "https://en/1"}]})
+        english = self.output / "TWIF-S10E01.json"
+        english.parent.mkdir(parents=True)
+        english.write_text(json.dumps(make_script()))
+        commands = []
+        fake_render, fake_run_json = self._fakes(commands)
+        with patch.object(cli, "adapt_to_spanish", return_value=spanish_script()), \
+             patch("text_to_speech.providers.create_provider", return_value=Tone()), \
+             patch("podcast.render.render_script_wav", side_effect=fake_render), \
+             patch("podcast.render.encode_mp3"), \
+             patch.object(cli, "_run_json", side_effect=fake_run_json):
+            report = self.run_cli("spanish")
+        self.assertEqual(report["label"], "S10E01")
+        self.assertIn("<https://en/1>", Path(commands[1][2]).read_text())
+        recorded = json.loads(self.state.read_text())["episodes"][0]
+        self.assertEqual(recorded["spanish"]["post_id"], 43)
+
+    def test_spanish_command_needs_english_script(self):
+        episodes.save_state({"season": 10, "episodes": [{"season": 10, "episode": 1}]})
+        with self.assertRaises(cli.PipelineError):
+            self.run_cli("spanish")
 
 
 if __name__ == "__main__":

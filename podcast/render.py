@@ -12,6 +12,15 @@ from text_to_speech.digest import chunk_narration
 from text_to_speech.providers.base import SpeechProvider
 
 DEFAULT_VOICES = {"HOST_A": "af_heart", "HOST_B": "am_michael"}
+
+# Per-language Kokoro settings. Kokoro's Spanish voices have a neutral accent; the
+# Chilean flavour comes from the script's wording.
+LANGUAGES = {
+    "en": {"kokoro_lang": "a", "voices": DEFAULT_VOICES,
+           "album": "This Week in FTR", "id3_lang": "eng"},
+    "es": {"kokoro_lang": "e", "voices": {"HOST_A": "ef_dora", "HOST_B": "em_alex"},
+           "album": "This Week in FTR (Español)", "id3_lang": "spa"},
+}
 TURN_PAUSE = 0.35  # seconds of silence between speakers
 CHUNK_PAUSE = 0.12  # seconds between chunks of one long turn
 MP3_BITRATE = "96k"

@@ -17,13 +17,38 @@ def _one_line(text: str) -> str:
     return " ".join(SHORTCODE_RE.sub("", str(text)).split())
 
 
+LABELS = {
+    "en": {
+        "in_episode": "In this episode",
+        "running": "**Running time:** about {minutes} minutes. **Download:** <{url}>",
+        "covers": "Covers lab notebook activity from {range}, as compiled in that week's "
+                  "Full Lab Digest.",
+        "other": "Spanish edition: <{url}>",
+        "credit": "_Script written with Claude from the weekly lab digest; voices generated "
+                  "with the Kokoro text-to-speech engine._",
+    },
+    "es": {
+        "in_episode": "En este episodio",
+        "running": "**Duración:** unos {minutes} minutos. **Descargar:** <{url}>",
+        "covers": "Cubre la actividad de los cuadernos de laboratorio entre {range}, según "
+                  "el resumen semanal del laboratorio (Full Lab Digest).",
+        "other": "Episodio original en inglés: <{url}>",
+        "credit": "_Guion adaptado al español de Chile con Claude a partir del episodio en "
+                  "inglés; voces generadas con el motor de texto a voz Kokoro._",
+    },
+}
+
+
 def build_post_markdown(
     title: str,
     script: Dict[str, Any],
     audio_url: str,
     minutes: float,
     date_range: str,
+    language: str = "en",
+    other_edition_url: str = "",
 ) -> str:
+    labels = LABELS[language]
     lines = [
         "# {}".format(_one_line(title)),
         "",
@@ -34,22 +59,15 @@ def build_post_markdown(
     ]
     notes = script.get("show_notes") or []
     if notes:
-        lines += ["## In this episode", ""]
+        lines += ["## {}".format(labels["in_episode"]), ""]
         lines += ["- {}".format(_one_line(note)) for note in notes]
         lines.append("")
-    lines += [
-        "**Running time:** about {} minutes. **Download:** <{}>".format(round(minutes), audio_url),
-        "",
-    ]
+    lines += [labels["running"].format(minutes=round(minutes), url=audio_url), ""]
     if date_range:
-        lines += [
-            "Covers lab notebook activity from {}, as compiled in that week's "
-            "Full Lab Digest.".format(date_range),
-            "",
-        ]
-    lines += [
-        "_Script written with Claude from the weekly lab digest; voices generated with "
-        "the Kokoro text-to-speech engine._",
-        "",
-    ]
+        if language == "es":
+            date_range = date_range.replace(" to ", " y ")
+        lines += [labels["covers"].format(range=date_range), ""]
+    if other_edition_url:
+        lines += [labels["other"].format(url=other_edition_url), ""]
+    lines += [labels["credit"], ""]
     return "\n".join(lines)
