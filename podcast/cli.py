@@ -28,6 +28,9 @@ from .script import (DEFAULT_HOSTS, MODEL, ScriptError, adapt_to_spanish, genera
                      validate_script, word_count)
 
 OUTPUT_DIR = episodes.REPO_ROOT / "podcast" / "output"
+# Scripts of published editions are archived here and committed with episodes.json, so a
+# later retry (e.g. `podcast spanish`) never depends on an expiring CI artifact.
+SCRIPT_DIR = episodes.REPO_ROOT / "podcast" / "scripts"
 SCRIPTS_DIR = episodes.REPO_ROOT / "scripts"
 CATEGORIES = {"en": "podcast", "es": "podcast-es"}
 MAX_DIGEST_AGE_DAYS = 10
@@ -156,6 +159,7 @@ def produce(script: Dict[str, Any], *, title: str, stem: str, language: str, epi
                           "--category", CATEGORIES[language], "--status", args.status])
     except PipelineError as exc:
         raise PipelineError("{} (the MP3 was already uploaded: {})".format(exc, audio_url))
+    _save_script(script, SCRIPT_DIR / (stem + ".json"))
     result.update({
         "status": post.get("post_status", args.status),
         "post_url": post.get("url", ""),
@@ -276,11 +280,14 @@ def cmd_spanish(args) -> int:
     entry = episodes.find_episode(state, args.episode)
     season, number = entry.get("season", state["season"]), entry["episode"]
     label = episodes.episode_label(season, number)
-    english_path = args.script_file or str(OUTPUT_DIR / "TWIF-{}.json".format(label))
-    if not Path(english_path).exists():
+    name = "TWIF-{}.json".format(label)
+    candidates = [Path(args.script_file)] if args.script_file else [SCRIPT_DIR / name,
+                                                                     OUTPUT_DIR / name]
+    english_path = next((str(c) for c in candidates if c.exists()), None)
+    if english_path is None:
         raise PipelineError(
-            "English script not found at {}. Pass --script-file (it is in the run's "
-            "twif-episode artifact).".format(english_path))
+            "English script for {} not found (looked in {}). Pass --script-file; it is in "
+            "the run's twif-episode artifact.".format(label, ", ".join(map(str, candidates))))
     english = _load_script(english_path)
     digest = episodes.DIGEST_DIR / entry.get("digest", "")
     date_range = episodes.digest_range(digest.read_text(encoding="utf-8")) if digest.is_file() else ""
@@ -321,7 +328,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     es = sub.add_parser("spanish", help="make the Spanish edition of a recorded episode")
     es.add_argument("--episode", type=int, help="episode number (default: latest)")
-    es.add_argument("--script-file", help="English script JSON (default: podcast/output/)")
+    es.add_argument("--script-file",
+                    help="English script JSON (default: podcast/scripts/, then podcast/output/)")
     es.add_argument("--spanish-script-file", help="reuse a saved Spanish script JSON")
     es.add_argument("--dry-run", action="store_true", help="write the Spanish script only")
     es.add_argument("--no-publish", action="store_true", help="stop after making the MP3")

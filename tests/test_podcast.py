@@ -321,6 +321,7 @@ class CliTests(unittest.TestCase):
             patch.object(episodes.load_state, "__defaults__", (self.state,)),
             patch.object(episodes.save_state, "__defaults__", (self.state,)),
             patch.object(cli, "OUTPUT_DIR", self.output),
+            patch.object(cli, "SCRIPT_DIR", root / "scripts"),
         ]
         for p in patches:
             p.start()
@@ -426,6 +427,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual([c.kwargs["language"] for c in provider.call_args_list], ["a", "e"])
         self.assertEqual(provider.call_args_list[1].kwargs["voice"], "ef_dora")
         self.assertEqual(encode.call_args_list[1][0][2]["language"], "spa")
+        archived = Path(self.tmp.name) / "scripts"
+        self.assertEqual(sorted(p.name for p in archived.iterdir()),
+                         ["TWIF-S10E01-es.json", "TWIF-S10E01.json"])
         recorded = json.loads(self.state.read_text())["episodes"]
         self.assertEqual(recorded[0]["episode"], 1)
         self.assertEqual(recorded[0]["post_url"], "https://genefish.wordpress.com/en")
@@ -451,7 +455,7 @@ class CliTests(unittest.TestCase):
     def test_spanish_command_remakes_latest_episode(self):
         episodes.save_state({"season": 10, "episodes": [
             {"season": 10, "episode": 1, "digest": "missing.md", "post_url": "https://en/1"}]})
-        english = self.output / "TWIF-S10E01.json"
+        english = Path(self.tmp.name) / "scripts" / "TWIF-S10E01.json"
         english.parent.mkdir(parents=True)
         english.write_text(json.dumps(make_script()))
         commands = []
