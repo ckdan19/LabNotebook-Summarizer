@@ -26,6 +26,10 @@ on:
         description: "Digest path to use (blank = newest weekly digest)"
         required: false
         default: ""
+      spanish_episode:
+        description: "Only (re)make the Spanish edition of this episode number (blank = normal run)"
+        required: false
+        default: ""
 
 # Writes podcast/episodes.json back so episode numbers keep counting up.
 permissions:
@@ -94,10 +98,16 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           STATUS: ${{ inputs.status || 'publish' }}
           DIGEST: ${{ inputs.digest }}
+          SPANISH_EPISODE: ${{ inputs.spanish_episode }}
         run: |
           set -o pipefail
-          args=(run --status "$STATUS")
-          [ -n "$DIGEST" ] && args+=(--digest "$DIGEST")
+          if [ -n "$SPANISH_EPISODE" ]; then
+            # Uses the English script archived in podcast/scripts/.
+            args=(spanish --episode "$SPANISH_EPISODE" --status "$STATUS")
+          else
+            args=(run --status "$STATUS")
+            [ -n "$DIGEST" ] && args+=(--digest "$DIGEST")
+          fi
           status=0
           .venv-tts/bin/python -m podcast "${args[@]}" > "$RUNNER_TEMP/episode.json" || status=$?
           cat "$RUNNER_TEMP/episode.json"
@@ -115,14 +125,14 @@ jobs:
       - name: Commit episode log
         if: always()
         run: |
-          git add podcast/episodes.json 2>/dev/null || true
+          git add podcast/episodes.json podcast/scripts/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No new episode recorded."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Record TWIF episode ($(date -u +%Y-%m-%d))"
+          git commit -m "Record TWIF episode and scripts ($(date -u +%Y-%m-%d))"
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 

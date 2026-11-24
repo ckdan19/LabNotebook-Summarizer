@@ -1,0 +1,368 @@
+{
+  "episode_title": "Off by a Factor of Ten",
+  "description": "Grace Crandall uncovers a tenfold offset in her q P C R standard curve, and Kathleen Durkin's eastern oyster methylation work keeps pointing to stronger influence from the father. Plus a question about the antibiotic in the resazurin assay, the start of Hazel Abrahamson's heat priming experiment, and a trial tank whose oysters keep surviving terrible water chemistry.",
+  "show_notes": [
+    "Standard curve correction: a fresh dilution run alone on plate ten shows all prior F H L 2026 q P C R plates used a curve tenfold higher than intended, raising questions about earlier results (Grace Crandall's Notebook).",
+    "Parent and offspring D M R overlap in Crassostrea virginica: sperm overlaps are larger and more concordant than egg overlaps, and zygote to larvae overlap is only partial (Kathleen Durkin Lab Notebook).",
+    "Functional annotation of the Crassostrea virginica genome, about 61 percent of 34,608 genes, joined to D M L and D M R sets ahead of a proper enrichment test (Kathleen Durkin Lab Notebook).",
+    "Resazurin assay antibiotic question: possible long-term microbiome effects of the master mix antibiotic, alongside a broodstock resazurin assay run on three oyster size classes (Kathleen Durkin Lab Notebook ideas log; J Balzer, Genefish WordPress).",
+    "Sublethal heat priming experiment: first one-hour 37 degree Celsius exposure delivered, then RNA extractions delayed by a DNase shortage (Hazel Abrahamson, Genefish WordPress).",
+    "Water chemistry trial tank: severely degraded water but no new mortalities, with automated literature connections suggesting hidden sublethal stress (Jesse Lowe and Cas Daniel, Genefish WordPress).",
+    "Starfish tank troubleshooting and a failed continuous water-exchange setup, plus a new transcriptomics mentoring arrangement with Grace (Samuel Slutz, Genefish WordPress)."
+  ],
+  "segments": [
+    {
+      "speaker": "HOST_A",
+      "text": "Imagine finding out that every plate you've run this season was measured against a ruler that was quietly off by a factor of ten."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "That's the kind of sentence that makes you put your coffee down."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "That's exactly what Grace Crandall pinned down this week. And she caught it herself, with one carefully designed plate."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Plus, in the eastern oyster, dads might matter more than moms when it comes to methylation. We'll get there."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Welcome to This Week in F-T-R, the show about what's happening in the Roberts Lab's open notebooks. I'm Maya."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And I'm Theo. This is our season ten opener, so hello again, everyone."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Quick lay of the land. Three of the seven notebook sources had activity this window. Tumbling Oysters, Ariana Huffmyer's notebook, Sam's Notebook, and Megan Ewing's notebook were quiet. But the active ones had plenty going on."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "So, Grace. This is her F H L twenty twenty-six project, which runs on quantitative P C R, or q P C R. Theo, quick refresher?"
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Sure. In q P C R you track how many amplification cycles it takes for a sample's signal to cross a threshold. That's the C q value. To turn a C q into an amount, you run a standard curve, a serial dilution of known starting quantities, and read your unknowns off that line."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Right. And Grace had a suspicion about her curve. So she made a fresh serial dilution and ran it alone, on its own plate, plate ten. Then she compared its C q values to the curve on plate nine."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Smart. Isolate the curve, nothing else on the plate to muddy the picture."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "And it confirmed the suspicion. Every previous run had actually used a standard curve spanning three times ten to the seventh down to three times ten to the first. The intended range was three times ten to the sixth down to three times ten to the zero."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "So in plain numbers, the curve that was supposed to top out at three million actually topped out at thirty million, and it bottomed out at thirty instead of three. Every point shifted by a factor of ten."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Exactly."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Okay, why does that matter? My guess, and this is me speculating, is that anything quantified against mislabeled standards would be off too. Though if every plate shared the same offset, relative comparisons might hold up better than the absolute numbers."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "That's a fair caveat, and Grace frames this as open questions. Should future runs standardize on the thirty million down to thirty range? And do the previously run plates need their standard curve designation corrected retroactively?"
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And the cross-notebook section of the digest flags that ripple effect, right?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "It does. It points to two of Grace's posts from October thirteenth, her current F H L twenty twenty-six q P C R results and the plate nine run on eelgrass swab D N A. The digest says those C q based results may need a second look, and it explicitly marks that as needing human verification. Grace or Sam would need to check whether those values were quantified against the mislabeled curve."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "I want to give credit here. This is what an open notebook is for. A hunch, a clean test, and the uncomfortable part written down for everyone to see."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Agreed. Not a failure, a correction caught in time."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Let's move to Kathleen Durkin's project, called ceasmallr. A few of these posts are dated earlier in November, but they came through in this digest, and together they make a nice arc."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "This is the eastern oyster, Crassostrea virginica. Parents, offspring, and D N A methylation."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Yes. Kathleen had already looked at parent and offspring overlap at the level of individual differentially methylated loci, or D M Ls. Now she's scaling up to differentially methylated regions, D M Rs."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "How do you even define overlap between regions? That's not trivial."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "She borrowed the criteria from the DSS software, the same tool that calls the regions in the first place. At least fifty base pairs, and at least three C p G sites. And she applied that across egg, sperm, zygote, and larvae D M R sets."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Nicely consistent. So what came out?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Three things. First, overlapping D M Rs are overwhelmingly directionally concordant. If a region shifts one way in a parent, it tends to shift the same way in offspring. Second, offspring and sperm overlaps are both larger and more concordant than offspring and egg overlaps."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "So, the dad signal."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "The dad signal. It reinforces what the digest calls a recurring finding in this project, that paternal methylation has a stronger influence on offspring. And third, there's only partial overlap between zygote and larvae, which again suggests partial epigenetic reprogramming during development."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Partial being the key word. Some marks reset, some carry through. Anything in the literature on this?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "The literature search found no peer-reviewed papers from the last twelve months matching the parent and offspring finding directly. There is one bioRxiv preprint, not yet peer-reviewed, from McDonough and colleagues. They showed that in eastern oysters, earlier hypoxia exposure leaves a lasting signature on gene-body methylation."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "But that's memory within one animal's lifetime, not across generations."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Right, and the digest is clear it doesn't test paternal versus maternal transmission. It's context that gene-body methylation can be a durable record in this species."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Gene bodies. I have a feeling that's coming back."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "It is. Kathleen's next move was asking what these regions actually do. She built a functional annotation table for the Crassostrea virginica genome, following the Roberts Lab Handbook workflow. BLAST the proteome against SwissProt, map proteins to genes, pull Gene Ontology terms, then map those to the broader GO slim categories."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Which means it only covers protein-coding genes."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "A limitation Kathleen notes. About sixty-one percent of thirty-four thousand six hundred eight genes got an annotation. The most common biological process terms were anatomical development, cell differentiation, and signaling."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Sixty-one percent sounds low until you remember this is a non-model invertebrate. The digest calls that a reasonable rate."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Then she joined that table to the parental treatment D M L and D M R sets. Across sets, they're concentrated in gene bodies and intergenic regions, with few in promoters."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "There are the gene bodies again. Is she calling anything enriched yet?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Not yet, and she's careful about it. So far this describes which functions are present, not which are over-represented. The next step is a proper enrichment test that uses all the tested C p G sites as the background, rather than the whole genome."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "That's the right background. Otherwise you're comparing against parts of the genome where you never could have detected a difference."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "One footnote from Kathleen's running ideas log. On November eighteenth she wrote that sparse annotation, around sixty percent in this species, likely hides biologically important stress-response transcripts, which get ignored by necessity in differential expression studies."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "The unannotated forty percent. The dark matter of the oyster genome."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "That same ideas log sets up our next story. On November sixteenth, Kathleen raised a methodological question about the lab's resazurin metabolic assay."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Remind me how that one works."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "The assay reads fluorescence as a proxy for oxidative metabolism. The lab's master mix includes an antibiotic to suppress activity from the shell microbiome, so you're measuring the oyster and not the bacteria living on it."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Makes sense. So what's the worry?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "That the antibiotic could cause unintended long-term shifts in the oyster's microbiome composition. Kathleen suggests it's probably negligible in routine hatchery assays, but it could matter for long-term performance studies."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Because if you assay an animal and then keep following it, you may have nudged its microbes along the way."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "And the timing is interesting. Four days later, a Broodstock Resazurin Assay post went up on the Genefish WordPress from J Balzer. Oysters in three size classes, ten, forty, and seventy millimeters, plus twelve-well plate controls, incubated at thirty-six degrees Celsius for four hours, with temperature and fluorescence measured every thirty minutes. Subsampled solution was later run on a ninety-six-well plate for endpoint analysis."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Same master mix?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "It appears to be. The digest traces the recipe to an October twenty-first post: five point eight seven milliliters of D M S O and fifty-eight point seven four milliliters of antibiotic solution added to the resazurin stock. There's no indication the concern has been addressed yet, which isn't surprising, since it was raised only days earlier."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Does the literature weigh in?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Three peer-reviewed papers, none testing her exact scenario. One mapped the antibiotic resistance genes of the Pacific oyster, Magallana gigas, across four European sites, and found over thirty-three thousand resistance gene sequences. Another found that Vibrio community structure shapes which beta-lactamase resistance genes circulate in oyster-farming environments, with dynamics tracking seawater temperature. And a third showed that husbandry practice, on-bottom versus floating cages, measurably changed oyster microbiome diversity."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "So oyster microbiomes respond to how you treat them, and they already carry a lot of resistance capacity."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "The digest's summary is that this makes Kathleen's concern a plausible, testable hypothesis, not a purely theoretical one."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Honestly, that sounds like a neat side experiment. Assay some oysters, leave others alone, look at the microbiome later. But that's me daydreaming, not anyone's plan."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Staying with heat, Hazel Abrahamson started a sublethal and lethal experiment. The question is whether sublethal heat priming changes survival and physiology under a later lethal heat stress."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "The what-doesn't-kill-you experiment."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Sort of. On November eighteenth, Hazel delivered a one-hour exposure at thirty-seven degrees Celsius, with improved temperature consistency, within plus or minus zero point three degrees. A subset of oysters was sampled, and the rest went back to the tanks for a week of recovery before a planned forty-four degree lethal exposure."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And what gets measured?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Glycogen levels, plus heat-shock and metabolic gene expression. It's a direct continuation of the design Hazel laid out back on October twenty-first, now actually running."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Gene expression means R N A extractions."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Which hit a snag. On the twentieth, extractions were postponed because the lab ran out of D-Nase one. Sam placed a new order, expected in one to two weeks. So Hazel pivoted to drafting the methods section of their senior thesis."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Best possible use of a reagent delay."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Last arc, tank water. Jesse Lowe has been running a water chemistry trial alongside routine checks in the tank room and SHORE room."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And the trial tank is rough."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "It is. On the eighteenth, after a full water change across all tanks, the trial tank read p H seven point six, alkalinity eighty, ammonia at zero point two five parts per million or more, nitrite at zero point five, and nitrate above two hundred. By the twentieth, alkalinity read forty, with the rest about the same. Meanwhile the standard holding tanks stayed near zero for ammonia and nitrite."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And mortality?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "No new mortalities since nitrate hit two hundred parts per million. Three total in the trial so far."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "That's the puzzle. Water that bad, and the oysters just carry on."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Cas Daniel's automated literature connections posts picked up on that twice this week. They cited work showing sustained ammonia exposure drives haemocyte death in Pacific oysters through an upregulated ammonia transporter gene, and a Research Square preprint in a related species where elevated alkalinity under low salinity suppresses ammonia excretion before survival drops. The second post added a paper showing moderate salinity optimizes ammonia excretion while extremes impair it, and one linking ambient ammonia and nitrate to pathogen-associated microbiome shifts in oysters and mussels."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And the digest adds one more?"
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "A peer-reviewed multi-omics study from Qiu and colleagues. Diploid Pacific oysters under ammonia nitrogen stress for up to forty-eight hours showed progressive hepatopancreas tissue injury, plus shifts in oxidative stress response, transport, and amino acid metabolism."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "So the shared idea is that survival may be the last thing to move, and low mortality could be masking stress that's building up. But to be clear, that's a hypothesis from the literature, not something the tank data shows yet."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Right. It would take physiological measurements to test it."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And oysters weren't the only animals with water trouble."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "No. Samuel Slutz spent several days troubleshooting a starfish tank, Aquilonastra, with problematically high nitrite and nitrate. Successive partial water changes and reduced feeding brought ammonia and nitrite back near zero. Samuel also tried a continuous water exchange between an auxiliary bucket and the main tank, but uneven pump flow rates sank it, so it went back to the standard setup."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Two pumps never agree. And a nice note in that post: Samuel set up a mentoring arrangement with Grace for transcriptomics and bioinformatics work."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Which brings us full circle to Grace."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "So, wrapping up. Grace caught a tenfold standard curve offset and is weighing how to handle past plates. Kathleen's eastern oyster work keeps pointing to a stronger paternal methylation influence, and the annotation groundwork is laid for a real enrichment test."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Kathleen also raised a fair question about the antibiotic in the resazurin master mix, right as broodstock assays were running. Hazel's heat priming experiment is underway, waiting on D-Nase. And Jesse's trial tank keeps defying expectations, at least on survival."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "Things to watch: the forty-four degree exposure, Kathleen's enrichment results, and how the q P C R correction shakes out."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "Thanks to everyone working in the open. You make this show possible."
+    },
+    {
+      "speaker": "HOST_A",
+      "text": "That's This Week in F-T-R. I'm Maya."
+    },
+    {
+      "speaker": "HOST_B",
+      "text": "And I'm Theo. See you next week."
+    }
+  ],
+  "model": "claude-opus-5-5",
+  "usage": {
+    "input_tokens": 10304,
+    "output_tokens": 14578
+  }
+}

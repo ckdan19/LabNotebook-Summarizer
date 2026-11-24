@@ -59,14 +59,14 @@ Paths are relative to the repository root.
 4. Report `title`, `minutes`, `audio_url`, `post_url` and `post_id` for English, and the
    same fields under `spanish`. Exit code 2 means the English episode was published but
    the Spanish edition failed; its error is under `spanish`. Retry it with
-   `.venv-tts/bin/python -m podcast spanish --script-file podcast/output/TWIF-S10EXX.json`
-   (add `--episode N` for an older episode). If the command prints
+   `.venv-tts/bin/python -m podcast spanish --episode N`, which reads the English script
+   archived in `podcast/scripts/`. In CI, run the workflow with `spanish_episode: N`. If the command prints
    `{"error": ...}`, report it verbatim and stop. Do not retry the upload or the post by
    hand. The error message says whether the MP3 had already been uploaded.
 
 5. A successful publish appends the episode (with its Spanish edition under `spanish`)
-   to `podcast/episodes.json`. Tell the user this
-   file needs committing so the next episode number is right.
+   to `podcast/episodes.json` and archives each published script in `podcast/scripts/`.
+   Tell the user both need committing so the next episode number is right.
 
 ## Notes
 

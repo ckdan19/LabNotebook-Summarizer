@@ -302,12 +302,14 @@ genefish.wordpress.com, because the token cannot create them.
 ```
 
 Episode numbers come from `podcast/episodes.json`, which is committed after each
-publish; the Spanish post is recorded under the episode's `spanish` key. A digest that
+publish; the Spanish post is recorded under the episode's `spanish` key. The scripts of
+published editions are archived in `podcast/scripts/` and committed alongside it. A digest that
 already has an episode is skipped. So is a digest more than 10 days old, unless
 `--allow-stale` is passed. If the Spanish edition fails, the English episode stays
 published and recorded, and the run exits 2. `.github/workflows/twif-podcast.yml` runs
 this every Wednesday and publishes live. Run it from the Actions tab with
-`status: draft` to get drafts instead, or disable the workflow to pause the show.
+`status: draft` to get drafts instead, or with `spanish_episode: N` to (re)make only the
+Spanish edition of episode N. Disable the workflow to pause the show.
 
 ## Claude Code Skills
 
